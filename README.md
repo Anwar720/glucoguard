@@ -5,27 +5,27 @@
 GlucoGuard Systems is an open-source Automated Insulin Delivery (AID) System simulation written in Rust.
 The project aims to model real-world insulin pump behavior by:
 
-Simulating continuous glucose monitoring (CGM) readings.
+- Simulating continuous glucose monitoring (CGM) readings.
 
-Delivering safe, automated basal and bolus insulin doses.
+- Delivering safe, automated basal and bolus insulin doses.
 
-Generating alerts for high or low glucose levels.
+- Generating alerts for high or low glucose levels.
 
-Providing secure access and role-based control for clinicians, caretakers, and patients.
+- Providing secure access and role-based control for clinicians, caretakers, and patients.
 
-This system supports CLI interaction and can later be extended with a web or GUI interface for visualization and management.
+- This system supports CLI interaction and can later be extended with a web or GUI interface for visualization and management.
 
 ⚙️ Features
 
-Continuous glucose simulation with configurable input.
+- Continuous glucose simulation with configurable input.
 
-Safe insulin dose calculation with built-in limits.
+- Safe insulin dose calculation with built-in limits.
 
-Role-based authentication (Clinician, Caretaker, Patient).
+- Role-based authentication (Clinician, Caretaker, Patient).
 
-Real-time alerts and secure logging of all operations.
+- Real-time alerts and secure logging of all operations.
 
-Extendable for web or GUI front-end visualization.
+- Extendable for web or GUI front-end visualization.
 
 🧩 Project Structure
 ```
@@ -42,17 +42,26 @@ glucoguard/
 │   └── sample_readings.txt  # Example glucose data input
 ├── Cargo.toml               # Rust project configuration
 └── README.md
+
 ```
 🧰 Setup Instructions
 1. Clone the Repository
-```git clone https://github.com/Anwar720/glucoguard.git
+```
+git clone https://github.com/Anwar720/glucoguard.git
 cd glucoguard
+
 ```
 2. Build the Project
-```cargo build```
+```
+cargo build
+
+```
 
 3. Run the Simulation
-```cargo run data/sample_readings.txt```
+```
+cargo run data/sample_readings.txt
+
+```
 
 
 You can also feed glucose readings via STDIN or socket input.
@@ -61,17 +70,26 @@ You can also feed glucose readings via STDIN or socket input.
 
 Fork the repository and create your own branch:
 
-```git checkout -b feature/your-feature-name```
+```
+git checkout -b feature/your-feature-name
+
+```
 
 
 Commit your changes with clear messages:
 
-```git commit -m "Add CGM simulation logic"```
+```
+git commit -m "Add CGM simulation logic"
+
+```
 
 
 Push your branch and create a pull request:
 
-```git push origin feature/your-feature-name```
+```
+git push origin feature/your-feature-name
+
+```
 
 
 Wait for team review before merging into main.
@@ -80,7 +98,10 @@ Wait for team review before merging into main.
 
 Run tests with:
 
-```cargo test```
+```
+cargo test
+
+```
 
 
 Add tests for new modules or edge cases (invalid data, overdose prevention, etc.).
