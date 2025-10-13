@@ -1,5 +1,5 @@
 [package]
-name = "automated_insulin_delivery_aid_system"
+name = "glucoguard"
 version = "0.1.0"
 edition = "2024"
 
