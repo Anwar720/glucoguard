@@ -1,0 +1,6 @@
+[package]
+name = "automated_insulin_delivery_aid_system"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
