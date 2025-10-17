@@ -1,2 +1,2 @@
-// CGM data simulation and parsing
+// Continuous Glucose Monitoring Simulation and parsing
 
