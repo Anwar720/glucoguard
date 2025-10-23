@@ -1,4 +1,9 @@
+mod db;
+
 use std::io::{self, Write};
+
+
+
 fn main() {
 
 let logo = r#"
@@ -11,6 +16,9 @@ let logo = r#"
                                                         
                                                         
 println!("{}", logo);
+
+    let db_connection = db::establish_connection();
+    // print_table_info(&db_connection.unwrap()).unwrap();
 
 
     // Main loop for menu
