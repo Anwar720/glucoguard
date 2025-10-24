@@ -1,7 +1,7 @@
 mod db;
-
+use crate::db::db_utils;
+use crate::db::initialize;
 use std::io::{self, Write};
-
 
 
 fn main() {
@@ -17,8 +17,8 @@ let logo = r#"
                                                         
 println!("{}", logo);
 
-    let db_connection = db::establish_connection();
-    // print_table_info(&db_connection.unwrap()).unwrap();
+    let db_connection = initialize::establish_connection();
+    //db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 
 
     // Main loop for menu

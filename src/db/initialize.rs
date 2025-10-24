@@ -1,4 +1,4 @@
-// SQLite Database set up and connection handling
+// SQLite Database initializaiton and connection management
 
 #[derive(Debug)]
 struct User{
@@ -58,6 +58,8 @@ struct MealLog{
 }
 
 
+
+//-----------------------Database table creation functions-----------------------//
 fn create_users_table(conn:&rusqlite::Connection)->rusqlite::Result<()> { 
     // SQL to create users table
     let sql = "
@@ -152,7 +154,7 @@ fn create_meal_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     Ok(())
 }
 
-// generating all tables using create functions
+// generating all tables for the database
 pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     create_users_table(conn)?;
     create_patients_table(conn)?;
@@ -164,6 +166,10 @@ pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     println!("Database initialized successfully.");
     Ok(())
 }
+
+
+//-----------------------Establishing database connection -----------------------//
+
 pub fn establish_connection() -> rusqlite::Result<rusqlite::Connection>{
      // Open the database connection
     let connection = rusqlite::Connection::open("./data/database.db")?;
@@ -175,25 +181,3 @@ pub fn establish_connection() -> rusqlite::Result<rusqlite::Connection>{
 }
 
 
-//used to print table info for debugging
-fn print_table_info(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
-    let mut stmt = conn.prepare("SELECT name FROM sqlite_master WHERE type='table'")?;
-    let tables = stmt.query_map([], |row| row.get::<_, String>(0))?;
-
-    for table in tables {
-        let table_name = table?;
-        println!("Table: {}", table_name);
-
-        let mut col_stmt = conn.prepare(&format!("PRAGMA table_info('{}')", table_name))?;
-        let columns = col_stmt.query_map([], |row| {
-            Ok((row.get::<_, String>(1)?, row.get::<_, String>(2)?)) // (name, type)
-        })?;
-
-        for col in columns {
-            let (name, col_type) = col?;
-            println!("  {}: {}", name, col_type);
-        }
-    }
-
-    Ok(())
-}
