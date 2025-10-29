@@ -8,3 +8,4 @@ edition = "2024"
 # sqlx and tokio are for session.rs 
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
 tokio = { version = "1", features = ["full"] }
+rusqlite = { version = "0.37.0", features = ["bundled"] }

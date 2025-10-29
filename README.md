@@ -38,6 +38,7 @@ glucoguard/
 │   ├── user.rs              # User and Role Data Structures
 │   ├── alerts.rs            # Alert generation for glucose 
 │   ├── logger.rs            # Logging and data persistence
+│   ├── db.rs                # Database set up and connection handling
 │   └── utils.rs             # Helper functions
 ├── data/
 │   └── sample_readings.txt  # Example glucose data input
