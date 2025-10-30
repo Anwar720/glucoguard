@@ -6,6 +6,6 @@ edition = "2024"
 
 [dependencies]
 # sqlx and tokio are for session.rs 
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
 tokio = { version = "1", features = ["full"] }
+sha2 = "0.10.0"
 rusqlite = { version = "0.37.0", features = ["bundled"] }
