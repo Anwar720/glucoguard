@@ -17,6 +17,7 @@ let logo = r#"
                                                         
 println!("{}", logo);
 
+    // Initialize the database connection
     let db_connection = initialize::establish_connection();
     //db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 

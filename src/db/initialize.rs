@@ -56,6 +56,12 @@ struct MealLog{
     carbohydrate_amount: f32,
     meal_time: String
 }
+struct Session{
+    session_id: i32,
+    user_id: i32,
+    creation_time: String,
+    expiration_time: Option<String>
+}
 
 
 
@@ -153,6 +159,18 @@ fn create_meal_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     conn.execute(sql, [])?;
     Ok(())
 }
+pub fn create_session_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
+    println!("Creating session table...");
+    let sql = "
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id INTEGER PRIMARY KEY UNIQUE,
+            user_id INTEGER NOT NULL,
+            creation_time TEXT NOT NULL,
+            expiration_time TEXT
+        )";
+    conn.execute(sql, [])?;
+    Ok(())
+}
 
 // generating all tables for the database
 pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
@@ -163,6 +181,7 @@ pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     create_insulin_logs_table(conn)?;
     create_alerts_table(conn)?;
     create_meal_logs_table(conn)?;
+    create_session_table(conn)?;
     println!("Database initialized successfully.");
     Ok(())
 }
