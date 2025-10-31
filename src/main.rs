@@ -1,7 +1,12 @@
 mod db;
+mod menus;
+mod auth;
+mod utils;
 use crate::db::db_utils;
 use crate::db::initialize;
-use std::io::{self, Write};
+use crate::menus::login_menu;
+
+
 
 
 fn main() {
@@ -18,53 +23,15 @@ let logo = r#"
 println!("{}", logo);
 
     // Initialize the database connection
-    let db_connection = initialize::establish_connection();
-    //db_utils::print_table_info(&db_connection.unwrap()).unwrap();
+    let db_connection = initialize::establish_connection().unwrap();
+   // db_utils::print_table_info(&db_connection.unwrap()).unwrap();
+
+    
+    login_menu::show_login_menu(&db_connection);
+    
 
 
-    // Main loop for menu
-    loop {
-        print!("\nEnter 1 to Login ");
-        print!("\nEnter 2 to Create an account ");
-        print!("\nEnter your choice:  ");
-        io::stdout().flush().unwrap();
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
 
-        let command = input.trim();
 
-        match command {
-            "1" => {
-                println!("\n ---------------Login---------------");
-                print!("Enter username: ");
-                io::stdout().flush().unwrap();      
-                let mut username = String::new();
-                io::stdin().read_line(&mut username).unwrap();  
-                print!("Enter password: ");
-                io::stdout().flush().unwrap();
-                let mut password = String::new();
-                io::stdin().read_line(&mut password).unwrap();
-            }
-            "2"=> {
-                println!("---------------Create Account---------------");
-                print!("\nEnter 1 for Clinicians/Doctors");
-                print!("\nEnter 2 for Patients");
-                print!("\nEnter 3 for Caretakers");
-                print!("\nEnter your role: ");
-                io::stdout().flush().unwrap();
-                let mut role_input = String::new();
-                io::stdin().read_line(&mut role_input).unwrap();
-                let role = role_input.trim();   
-                // creating account based on role 
-                match role {
-                    "1" => println!("\nCreating account for Clinician/Doctor"),
-                    "2" => println!("\nPlease contact your Clinician to create a Patient account"),
-                    "3" => println!("\nCreating account for Caretaker"),
-                    _ => println!("\nInvalid role choice!")
-                }
-            }
-            _ => println!("Invalid choice!")
-        }
-    }
 }
