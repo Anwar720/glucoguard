@@ -4,7 +4,7 @@ connection pool. It prints a success message for
 successful connection or generates error otherwise
 
 
-*/
+
 
 //update based on database used
 use sqlx::SqlitePool;
@@ -25,3 +25,5 @@ async fn userdb_connection() ->Result<(), sqlx::Error>{
 
 	Ok(())
 }
+
+*/

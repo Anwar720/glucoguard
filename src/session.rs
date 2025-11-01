@@ -8,7 +8,8 @@ Store active sessions in memory (or optionally persist to disk)
 use std::collections::HashMap;
 use std::time::{SystemTime, Duration, UNIX_EPOCH};
 use sha2::{Digest, Sha256};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use tokio::time;
 
 use crate::user::User;
@@ -29,18 +30,18 @@ impl Session {
 
 #[derive(Clone)]
 pub struct SessionManager {
-    sessions: Arc<Mutex<HashMap<String, Session>>>,
+    sessions: Arc<RwLock<HashMap<String, Session>>>,
 }
 
 impl SessionManager {
     pub fn new() -> Self {
         Self {
-            sessions: Arc::new(Mutex::new(HashMap::new())),
+            sessions: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     /// Create a new session for a user
-    pub fn create_session(&self, user: User) -> String {
+    pub async fn create_session(&self, user: User) -> String {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards")
@@ -64,18 +65,40 @@ impl SessionManager {
         };
 
         // Store session in map
-        let mut sessions = self.sessions.lock().unwrap();
+        let mut sessions = self.sessions.write().await;
         sessions.insert(session_id.clone(), session);
 
         session_id
     }
 
-    // remove sessions by ID
-    pub fn clean_up_expired(){
-        let mut sessions = self.sessions.lock().unwrap();
-        sessions.remove(session_id);
+    //get a session
+    pub async fn get_session(&self, session_id: &str) -> Option<User> {
+        let mut sessions = self.sessions.write().await;
+        if let Some(session) = sessions.get(session_id) {
+            if session.is_expired() {
+                sessions.remove(session_id);
+                None
+            } else {
+                Some(session.user.clone())
+            }
+        } else {
+            None
+        }
     }
 
+    // remove sessions by ID
+    pub async fn clean_up_expired(&self) {
+        let mut sessions = self.sessions.write().await;
+        let expired_ids: Vec<String> = sessions
+            .iter()
+            .filter(|(_, s)| s.is_expired())
+            .map(|(id, _)| id.clone())
+            .collect();
+
+        for id in expired_ids {
+            sessions.remove(&id);
+        }
+    }
     //clean up sessions in the background
     pub fn start_cleanup_task(self: Arc<Self>) {
         tokio::spawn(async move {
@@ -83,8 +106,31 @@ impl SessionManager {
 
             loop {
                 interval.tick().await;
-                self.clean_up_expired();
+                self.clean_up_expired().await;
             }
         });
+    }
+    /// Invalidate a single session (logout)
+    pub fn invalidate_session(&self, session_id: &str) {
+        let mut sessions = self.sessions.write().await;
+        sessions.remove(session_id);
+    }
+
+    /// Invalidate all sessions for a given user (e.g., password change)
+    pub fn invalidate_user_sessions(&self, username: &str) {
+        let mut sessions = self.sessions.write().await;
+        sessions.retain(|_, s| s.user.name != username);
+    }
+
+    /// Invalidate all sessions (e.g., system-wide security breach)
+    pub fn invalidate_all(&self) {
+        let mut sessions = self.sessions.write().await;
+        sessions.clear();
+    }
+
+    /// Cleanup expired or idle sessions
+    pub fn cleanup_expired_and_idle(&self, max_idle: Duration) {
+        let mut sessions = self.sessions.write().await;
+        sessions.retain(|_, s| !s.is_expired() && !s.is_inactive(max_idle));
     }
 }
