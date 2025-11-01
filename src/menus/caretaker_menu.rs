@@ -1,6 +1,6 @@
 use crate::utils;
 
-pub fn show_care_taker_menu(conn: &rusqlite::Connection) {
+pub fn show_caretaker_menu(conn: &rusqlite::Connection) {
     loop {
         println!("=== CareTaker Menu ===");
         println!("1. View Patients");

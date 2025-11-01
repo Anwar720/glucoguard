@@ -10,17 +10,17 @@ pub struct User{
     pub last_login: Option<String>
 }
 pub struct Patient{
-    patient_id: i32,
-    first_name: String,
-    last_name: String,
-    date_of_birth: String,
-    basal_rate: f32,
-    bolus_rate: f32,
-    max_dosage: f32,
-    low_glucose_threshold: f32,
-    high_glucose_threshold: f32,
-    clinician_id: i32,
-    caretaker_id: i32
+    pub patient_id: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub date_of_birth: String,
+    pub basal_rate: f32,
+    pub bolus_rate: f32,
+    pub max_dosage: f32,
+    pub low_glucose_threshold: f32,
+    pub high_glucose_threshold: f32,
+    pub clinician_id: String,
+    pub caretaker_id: String
 }
 pub struct PatientCareTeam{
     care_taker_id: i32,

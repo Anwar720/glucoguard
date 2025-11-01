@@ -6,16 +6,16 @@ use rpassword::read_password;
 
 pub struct LoginResult {
     pub success: bool,
-    pub user_id: Option<String>,
-    pub role: Option<String>,
+    pub user_id: String,
+    pub role: String,
 }
 
 fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginResult{
     //return template for failed login 
     let failed_login = LoginResult {
         success: false,
-        user_id: None,
-        role: None,
+        user_id:String::new(),
+        role:String::new(),
     };
 
     // fetch user by username 
@@ -40,8 +40,8 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginR
         if password_is_valid {
             return LoginResult {
                 success: true,
-                user_id: Some(user.id),
-                role: Some(user.role),
+                user_id: user.id,
+                role: user.role.to_string(),
             };
         }
     }
@@ -49,14 +49,14 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginR
         // return failed login
         LoginResult {
             success: false,
-            user_id: None,
-            role: None,
+            user_id: String::new(),
+            role: String::new(),
         }
     
 }
 
 
-pub fn show_login_menu(conn: &rusqlite::Connection) {
+pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
     println!("\n --------------- Login ---------------");
     loop{
         print!("Enter username: ");
@@ -72,12 +72,9 @@ pub fn show_login_menu(conn: &rusqlite::Connection) {
         // call login function to validate username and password
         let login_result = user_login(&conn,&username,&password);
         if login_result.success {
-            println!("Login successful! User ID: {}, Role: {}", 
-            login_result.user_id.unwrap(), login_result.role.unwrap());
-            break;
+            return login_result;
         }
         // generic error message for failed login 
         println!("Username or Password is incorrect.");
     }
-    println!("Login successful! Welcome!");
 }

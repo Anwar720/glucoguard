@@ -2,15 +2,17 @@
 use std::collections::HashSet;
 
 // lists os all permissions 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Permission {
     ViewPatient,
     CreateClinicianAccount,
+    RemoveClinicianAccount,
     CreatePatientAccount,
     CreateCaretakerLink,
-    UpdatePatient,
+    EditPatientData,
     ViewGlucose,
-    AddGlucose
+    AddGlucose,
+    ViewAlerts,
 }
 
 // struct to represent roles and their associated permissions
@@ -21,65 +23,50 @@ pub struct Role{
 
 // impl methods for Role struct and permission checking
 impl Role{
-    pub fn new(name: &str, permissions: HashSet<Permission>) -> Self {
+    pub fn new(name: &str) -> Self {
+        // get default permissions using role
+        let permissions = Self::default_permissions(name);
         // create new role with given name and permissions
         Self {
             name: name.to_string(),
-            permissions: permissions.iter().cloned().collect(),
+            permissions,
         }
     }
+
     // method to check if role has specific permission
     pub fn has_permission(&self, permission: &Permission) -> bool {
         self.permissions.contains(permission)
     }
-}
 
+    fn default_permissions(role_name: &str) -> HashSet<Permission> {
+        let mut perms = HashSet::new();
+        match role_name{
+            "admin" => {
+                perms.insert(Permission::CreateClinicianAccount);
+                perms.insert(Permission::RemoveClinicianAccount);
+            }
+            "clinician" => {
+                perms.insert(Permission::CreatePatientAccount);
+                perms.insert(Permission::EditPatientData);
+                perms.insert(Permission::ViewGlucose);
+                perms.insert(Permission::ViewAlerts);
+                perms.insert(Permission::ViewPatient);
+            }
+            "patient" => {
+                perms.insert(Permission::ViewPatient);
+                perms.insert(Permission::ViewGlucose);
+                perms.insert(Permission::AddGlucose);
+                perms.insert(Permission::CreateCaretakerLink);
+            }
+            "caretaker" => {
+                perms.insert(Permission::ViewPatient);
+                perms.insert(Permission::ViewGlucose);
 
-// function to create clinician role with specific permissions
-pub fn clinician_role() -> Role {
-    Role::new(
-        "clinician",
-        &[
-            Permission::ViewPatient,
-            Permission::CreateClinicianAccount,
-            Permission::CreatePatientAccount,
-            Permission::CreateCaretakerLink,
-            Permission::UpdatePatient,
-            Permission::ViewGlucose,
-            Permission::AddGlucose,
-        ]
-    )
-}
-
-// function to create patient role with specific permissions
-pub fn patient_role() -> Role {
-    Role::new(
-        "patient",
-        &[
-            Permission::ViewPatient,
-            Permission::ViewGlucose,
-            Permission::AddGlucose,
-            Permission::CreateCaretakerLink,
-        ]
-    )
-}
-
-// function to create caretaker role with specific permissions
-pub fn caretaker_role() -> Role {
-    Role::new(
-        "caretaker",
-        &[
-            Permission::ViewPatient,
-            Permission::ViewGlucose,
-        ]
-    )
-}
-
-pub fn admin_role() -> Role {
-    Role::new(
-        "admin",
-        &[
-            Permission::CreateClinicianAccount,
-        ]
-    )
+            }
+            _ => {
+                eprintln!("Warning: Unknown role '{}', no permissions assigned.", role_name);
+            }
+        }
+        perms
+    }
 }

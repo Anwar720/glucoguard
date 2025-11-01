@@ -1,9 +1,10 @@
 //For DB quaries like inserting data, fetching data etc.
-use crate::db::models::{User};
+use crate::db::models::{User,Patient};
 use uuid::Uuid;
 use crate::auth;
 use chrono::Utc;
 use rusqlite::{Result,params};
+
 
 // check if username exists and return boolean
 fn check_user_name_exists(conn: &rusqlite::Connection, username: &str) -> Result<bool> {
@@ -62,4 +63,59 @@ pub fn get_user_by_username(conn: &rusqlite::Connection, username: &str) -> Resu
     }
     
     Ok(None)
+}
+
+/// Fetches all usernames with role clinician
+pub fn get_all_clinicians(conn: &rusqlite::Connection) -> Result<Vec<String>> {
+    let mut stmt = conn.prepare("SELECT user_name FROM users WHERE role = ?1")?;
+    
+    let clinician_iter = stmt.query_map(["clinician"], |row| {
+        row.get(0) // get the first column: user_name
+    })?;
+
+    // Collect into a vector
+    let mut usernames = Vec::new();
+    for username_result in clinician_iter {
+        usernames.push(username_result?);
+    }
+
+    Ok(usernames)
+}
+
+// create patient account from patient struct
+pub fn create_patient_account(conn: &rusqlite::Connection, patient: &Patient) -> Result<()> {
+    let sql = "
+        INSERT INTO patients (
+            patient_id,
+            first_name,
+            last_name,
+            date_of_birth,
+            basal_rate,
+            bolus_rate,
+            max_dosage,
+            low_glucose_threshold,
+            high_glucose_threshold,
+            clinician_id,
+            caretaker_id
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+    ";
+
+    conn.execute(
+        sql,
+        params![
+            patient.patient_id,
+            patient.first_name,
+            patient.last_name,
+            patient.date_of_birth,
+            patient.basal_rate,
+            patient.bolus_rate,
+            patient.max_dosage,
+            patient.low_glucose_threshold,
+            patient.high_glucose_threshold,
+            patient.clinician_id,
+            patient.caretaker_id
+        ]
+    )?;
+
+    Ok(())
 }

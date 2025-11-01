@@ -2,10 +2,11 @@ mod db;
 mod menus;
 mod auth;
 mod utils;
+mod access_control;
 use crate::db::db_utils;
 use crate::db::initialize;
-use crate::menus::login_menu;
-
+// use crate::access_control;
+use crate::menus::{login_menu,admin_menu,patient_menu,caretaker_menu,clinician_menu};
 
 
 
@@ -26,12 +27,20 @@ println!("{}", logo);
     let db_connection = initialize::establish_connection().unwrap();
    // db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 
-    
-    login_menu::show_login_menu(&db_connection);
-    
+    //validate login and get user id and role
+    let user_option = login_menu::show_login_menu(&db_connection);
+    // create a user permission instance
+    let role = access_control::Role::new(&user_option.role);
 
-
-
+    match role.name.as_str() {
+    "admin" => admin_menu::show_admin_menu(&db_connection, &role),
+    "clinician" => clinician_menu::show_clinician_menu(&db_connection),
+    "patient" => patient_menu::show_patient_menu(&db_connection),
+    "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection),
+    _ => {
+      // log error
+      }
+    }
 
 
 }
