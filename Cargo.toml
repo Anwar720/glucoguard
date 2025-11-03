@@ -5,7 +5,13 @@ edition = "2024"
 #we need to add authors
 
 [dependencies]
-# sqlx and tokio are for session.rs 
 tokio = { version = "1", features = ["full"] }
 sha2 = "0.10.0"
 rusqlite = { version = "0.37.0", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+argon2 = "0.5"
+rand = "0.8" 
+chrono = { version = "0.4", features = ["serde", "clock"] }
+dotenv = "0.15"
+rpassword = "7.3"
+hex = "0.4.3"

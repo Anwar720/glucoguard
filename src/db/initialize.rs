@@ -1,70 +1,12 @@
 // SQLite Database initializaiton and connection management
 
-#[derive(Debug)]
-struct User{
-    id: i32,
-    user_name: String,
-    password_hash: String,
-    role: String,
-    created_at: String,
-    last_login: Option<String>
-}
-struct Patient{
-    patient_id: i32,
-    first_name: String,
-    last_name: String,
-    date_of_birth: String,
-    basal_rate: f32,
-    bolus_rate: f32,
-    max_dosage: f32,
-    low_glucose_threshold: f32,
-    high_glucose_threshold: f32,
-    clinician_id: i32,
-    caretaker_id: i32
-}
-struct PatientCareTeam{
-    care_taker_id: i32,
-    patient_id_list: Vec<i32>
-}
-struct GlucoseReading{
-    reading_id: i32,
-    patient_id: i32,
-    glucose_level: f32,
-    reading_time: String,
-    status: String
-}
-struct InsulinLog{
-    dosage_id: i32,
-    patient_id: i32,
-    action_type: String,
-    dosage_units: f32,
-    requested_by: String,
-    dosage_time: String
-}
-struct Alerts{
-    alert_id: i32,
-    patient_id: i32,
-    alert_type: String,
-    alert_message: String,
-    alert_time: String,
-    is_resolved: bool,
-    resolved_by: Option<String>,
-}
-struct MealLog{
-    meal_id: i32,
-    patient_id: i32,
-    carbohydrate_amount: f32,
-    meal_time: String
-}
-
-
 
 //-----------------------Database table creation functions-----------------------//
 fn create_users_table(conn:&rusqlite::Connection)->rusqlite::Result<()> { 
     // SQL to create users table
     let sql = "
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
+            id TEXT NOT NULL PRIMARY KEY ,
             user_name TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL,
@@ -153,6 +95,17 @@ fn create_meal_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     conn.execute(sql, [])?;
     Ok(())
 }
+pub fn create_session_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
+    let sql = "
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id INTEGER PRIMARY KEY UNIQUE,
+            user_id INTEGER NOT NULL,
+            creation_time TEXT NOT NULL,
+            expiration_time TEXT
+        )";
+    conn.execute(sql, [])?;
+    Ok(())
+}
 
 // generating all tables for the database
 pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
@@ -163,7 +116,8 @@ pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     create_insulin_logs_table(conn)?;
     create_alerts_table(conn)?;
     create_meal_logs_table(conn)?;
-    println!("Database initialized successfully.");
+    create_session_table(conn)?;
+    println!("Successfully connected to database...");
     Ok(())
 }
 
@@ -174,10 +128,11 @@ pub fn establish_connection() -> rusqlite::Result<rusqlite::Connection>{
      // Open the database connection
     let connection = rusqlite::Connection::open("./data/database.db")?;
     
-    // Initialize database tables if they don't exist
+  // Initialize database tables if they don't exist
     initialize_database(&connection)?;
     
     Ok(connection)
 }
+
 
 

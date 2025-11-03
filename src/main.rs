@@ -1,7 +1,15 @@
 mod db;
+mod session;
+mod menus;
+mod auth;
+mod utils;
+mod access_control;
+use crate::session::SessionManager;
 use crate::db::db_utils;
 use crate::db::initialize;
-use std::io::{self, Write};
+// use crate::access_control;
+use crate::menus::{login_menu,admin_menu,patient_menu,caretaker_menu,clinician_menu};
+
 
 
 fn main() {
@@ -17,53 +25,27 @@ let logo = r#"
                                                         
 println!("{}", logo);
 
-    let db_connection = initialize::establish_connection();
-    //db_utils::print_table_info(&db_connection.unwrap()).unwrap();
+    // Initialize the database connection
+    let db_connection = initialize::establish_connection().unwrap();
+   // db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 
+    //validate login and get user id and role
+    let user_option = login_menu::show_login_menu(&db_connection);
+    // create a user permission instance
+    let role = access_control::Role::new(&user_option.role);
 
-    // Main loop for menu
-    loop {
-        print!("\nEnter 1 to Login ");
-        print!("\nEnter 2 to Create an account ");
-        print!("\nEnter your choice:  ");
-        io::stdout().flush().unwrap();
+    let session_manager = SessionManager::new();
+    let session_id = session_manager
+        .create_session(&db_connection, user_option.user_id.clone())
+        .expect("Failed to create session");
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-
-        let command = input.trim();
-
-        match command {
-            "1" => {
-                println!("\n ---------------Login---------------");
-                print!("Enter username: ");
-                io::stdout().flush().unwrap();      
-                let mut username = String::new();
-                io::stdin().read_line(&mut username).unwrap();  
-                print!("Enter password: ");
-                io::stdout().flush().unwrap();
-                let mut password = String::new();
-                io::stdin().read_line(&mut password).unwrap();
-            }
-            "2"=> {
-                println!("---------------Create Account---------------");
-                print!("\nEnter 1 for Clinicians/Doctors");
-                print!("\nEnter 2 for Patients");
-                print!("\nEnter 3 for Caretakers");
-                print!("\nEnter your role: ");
-                io::stdout().flush().unwrap();
-                let mut role_input = String::new();
-                io::stdin().read_line(&mut role_input).unwrap();
-                let role = role_input.trim();   
-                // creating account based on role 
-                match role {
-                    "1" => println!("\nCreating account for Clinician/Doctor"),
-                    "2" => println!("\nPlease contact your Clinician to create a Patient account"),
-                    "3" => println!("\nCreating account for Caretaker"),
-                    _ => println!("\nInvalid role choice!")
-                }
-            }
-            _ => println!("Invalid choice!")
-        }
+    match role.name.as_str() {
+    "admin" => admin_menu::show_admin_menu(&db_connection, &role, &session_id),
+    "clinician" => clinician_menu::show_clinician_menu(&db_connection, &session_id),
+    "patient" => patient_menu::show_patient_menu(&db_connection, &session_id),
+    "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &session_id),
+    _ => {
+      // log error
+      }
     }
 }

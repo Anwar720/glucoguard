@@ -1,23 +1,13 @@
-/*
-Securely track logged-in users.
-Associate each session with a unique token.
-Support session expiration (time-based).
-Store active sessions in memory (or optionally persist to disk)
-*/
+use std::time::{SystemTime, Duration};
+use crate::db::queries;
+use rusqlite::Connection;
+use rand::RngCore;
 
-use std::collections::HashMap;
-use std::time::{SystemTime, Duration, UNIX_EPOCH};
-use sha2::{Digest, Sha256};
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tokio::time;
-
-use crate::user::User;
-
+//struct for sessoin
 #[derive(Clone, Debug)]
 pub struct Session {
     pub session_id: String,
-    pub user: User,
+    pub username: String,
     pub create_time: SystemTime,
     pub exp_time: Duration,
 }
@@ -28,109 +18,75 @@ impl Session {
     }
 }
 
+//session manager to manage session creation and cleanup
 #[derive(Clone)]
-pub struct SessionManager {
-    sessions: Arc<RwLock<HashMap<String, Session>>>,
-}
+pub struct SessionManager;
 
 impl SessionManager {
     pub fn new() -> Self {
-        Self {
-            sessions: Arc::new(RwLock::new(HashMap::new())),
-        }
+        Self
     }
 
-    /// Create a new session for a user
-    pub async fn create_session(&self, user: User) -> String {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_secs();
+    // Create a new session and persist it in the DB
+    pub fn create_session(&self, conn: &Connection, username: String) -> rusqlite::Result<String> {
+        // Generate a random session token
+        let mut bytes = [0u8; 32];
+        rand::thread_rng().fill_bytes(&mut bytes);
+        let session_id = hex::encode(bytes);
 
-        // Use user info and timestamp as input to the hash
-        let base = format!("{}_{}_{}", user.name, now, user.password_hash);
-
-        // Hash to get a unique, deterministic ID
-        let mut hasher = Sha256::new();
-        hasher.update(base);
-        let hash_bytes = hasher.finalize();
-        let session_id = format!("{:x}", hash_bytes);
-
-        // Create the Session
+        // Create session
         let session = Session {
             session_id: session_id.clone(),
-            user,
+            username,
             create_time: SystemTime::now(),
             exp_time: Duration::from_secs(60 * 60), // 1 hour
         };
 
-        // Store session in map
-        let mut sessions = self.sessions.write().await;
-        sessions.insert(session_id.clone(), session);
+        // Store directly in DB (no async)
+        queries::add_session_to_db(conn, &session)?;
 
-        session_id
+        Ok(session_id)
     }
 
-    //get a session
-    pub async fn get_session(&self, session_id: &str) -> Option<User> {
-        let mut sessions = self.sessions.write().await;
-        if let Some(session) = sessions.get(session_id) {
-            if session.is_expired() {
-                sessions.remove(session_id);
-                None
-            } else {
-                Some(session.user.clone())
-            }
-        } else {
-            None
+    // Retrieve a session by username
+    pub fn get_session_by_username(&self, conn: &Connection, username: &str) -> Option<Session> {
+        match queries::get_session(conn, username) {
+            Ok(Some(session)) if !session.is_expired() => Some(session),
+            _ => None,
         }
     }
 
-    // remove sessions by ID
-    pub async fn clean_up_expired(&self) {
-        let mut sessions = self.sessions.write().await;
-        let expired_ids: Vec<String> = sessions
-            .iter()
-            .filter(|(_, s)| s.is_expired())
-            .map(|(id, _)| id.clone())
-            .collect();
-
-        for id in expired_ids {
-            sessions.remove(&id);
+    // Retrieve a session by ID
+    pub fn get_session_by_id(&self, conn: &Connection, session_id: &str) -> Option<Session> {
+        match queries::get_session_by_id(conn, session_id) {
+            Ok(Some(session)) if !session.is_expired() => Some(session),
+            _ => None,
         }
     }
-    //clean up sessions in the background
-    pub fn start_cleanup_task(self: Arc<Self>) {
-        tokio::spawn(async move {
-            let mut interval = time::interval(Duration::from_secs(30));
 
-            loop {
-                interval.tick().await;
-                self.clean_up_expired().await;
+    // Remove a session manually
+    pub fn remove_session(&self, conn: &Connection, session_id: &str) -> rusqlite::Result<()> {
+        queries::remove_session(conn, session_id)
+    }
+
+    // Periodic cleanup task (removes expired sessions)
+    pub fn cleanup_expired_sessions(&self, conn: &Connection) -> rusqlite::Result<()> {
+        queries::remove_expired_sessions(conn)
+    }
+
+    // Run cleanup in a background thread every 60 seconds
+    pub fn run_cleanup(&self, db_path: &str) {
+        let db_path = db_path.to_string();
+        std::thread::spawn(move || loop {
+            match Connection::open(&db_path) {
+                Ok(conn) => {
+                    if let Err(e) = queries::remove_expired_sessions(&conn) {
+                        eprintln!("Failed to cleanup expired sessions: {:?}", e);
+                    }
+                }
+                Err(e) => eprintln!("Failed to open DB connection for cleanup: {:?}", e),
             }
+            std::thread::sleep(Duration::from_secs(60));
         });
-    }
-    /// Invalidate a single session (logout)
-    pub fn invalidate_session(&self, session_id: &str) {
-        let mut sessions = self.sessions.write().await;
-        sessions.remove(session_id);
-    }
-
-    /// Invalidate all sessions for a given user (e.g., password change)
-    pub fn invalidate_user_sessions(&self, username: &str) {
-        let mut sessions = self.sessions.write().await;
-        sessions.retain(|_, s| s.user.name != username);
-    }
-
-    /// Invalidate all sessions (e.g., system-wide security breach)
-    pub fn invalidate_all(&self) {
-        let mut sessions = self.sessions.write().await;
-        sessions.clear();
-    }
-
-    /// Cleanup expired or idle sessions
-    pub fn cleanup_expired_and_idle(&self, max_idle: Duration) {
-        let mut sessions = self.sessions.write().await;
-        sessions.retain(|_, s| !s.is_expired() && !s.is_inactive(max_idle));
     }
 }
