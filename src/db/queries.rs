@@ -109,7 +109,39 @@ pub fn get_user_by_username(conn: &rusqlite::Connection, username: &str) -> Resu
 }
 
 /// Fetches all usernames with role clinician
-pub fn get_all_clinicians(conn: &rusqlite::Connection) -> Result<Vec<String>> {
+pub fn get_all_clinicians(
+    conn: &rusqlite::Connection,
+    session_id: &str) 
+    -> Result<Vec<String>> {
+
+    let required_permission = Permission::CreateClinicianAccount;
+    let session_manager = SessionManager::new();
+
+    // Retrieve session
+    let opt_session: Option<Session> = session_manager.get_session_by_id(conn, session_id);
+    let session: Session = opt_session
+        .ok_or(rusqlite::Error::InvalidQuery)?;
+
+    // Check if session is expired
+    if session.is_expired() {
+        eprintln!("Session has expired!");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
+    // Convert session.role (String) into Role
+    let role: Role = Role::new(&session.role,&session.user_id);
+
+    if role.name != "admin" {
+        eprintln!("User does not have rights to access this feature!");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
+    // Check permission
+    if !session_manager.check_permissions(conn, session_id, &role, required_permission) {
+        eprintln!("Access denied: insufficient permissions.");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
     let mut stmt = conn.prepare("SELECT user_name FROM users WHERE role = ?1")?;
     
     let clinician_iter = stmt.query_map(["clinician"], |row| {
@@ -152,6 +184,11 @@ pub fn insert_patient_account_details_in_db(
     // Check permission
     if !session_manager.check_permissions(conn, session_id, &role, required_permission) {
         eprintln!("Access denied: insufficient permissions.");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
+    if role.name != "clinician" {
+        eprintln!("User does not have rights to access this feature!");
         return Err(rusqlite::Error::InvalidQuery);
     }
 
@@ -248,6 +285,11 @@ pub fn get_patients_by_clinician_id(
         eprintln!("Access denied: insufficient permissions.");
         return Err(Box::new(rusqlite::Error::InvalidQuery));
     }
+
+    if role.name != "clinician" {
+        eprintln!("User does not have rights to access this feature!");
+        return Err(Box::new(rusqlite::Error::InvalidQuery));
+    }
     let mut stmt = conn.prepare(
         "SELECT patient_id, first_name, last_name 
         FROM patients 
@@ -297,7 +339,7 @@ pub fn validate_activation_code(
             user_type: row.get(0)?,
             user_id: row.get(1)?,
         })
-    }).optional()?; // <-- now works
+    }).optional()?;
 
     Ok(info)
 }
@@ -316,7 +358,26 @@ pub fn add_caretaker_team_member(
     conn: &Connection,
     caretaker_id: &str,
     patient_id: &str, // comma-separated patient IDs
+    session_id: &str
 ) -> Result<()> {
+    let session_manager = SessionManager::new();
+
+    //search for session
+    let opt_session: Option<Session> = session_manager.get_session_by_id(conn, session_id);
+    let session: Session = opt_session
+        .ok_or(rusqlite::Error::InvalidQuery)?;
+
+    //check session expiration
+    if session.is_expired() {
+        eprintln!("Session has expired!");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+    let role: Role = Role::new(&session.role,&session.user_id);
+
+    if role.name != "patient" || role.name != "clinician" {
+        eprintln!("User does not have rights to access this feature!");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
     let sql = "
         INSERT INTO caretaker_team (care_taker_id, patient_id_list)
         VALUES (?1, ?2)
@@ -457,5 +518,3 @@ pub fn add_caretaker_to_patient_account(conn: &Connection, patient_id: &str, car
 
     Ok(())
 }
-
-
