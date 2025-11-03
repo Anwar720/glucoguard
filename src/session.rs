@@ -1,7 +1,15 @@
+
 use std::time::{SystemTime, Duration};
 use crate::db::queries;
 use rusqlite::Connection;
 use rand::RngCore;
+
+/*
+Securely track logged-in users.
+Associate each session with a unique token.
+Support session expiration (time-based).
+Store active sessions in memory (or optionally persist to disk)
+*/
 
 //struct for sessoin
 #[derive(Clone, Debug)]
@@ -47,7 +55,6 @@ impl SessionManager {
 
         Ok(session_id)
     }
-
     // Retrieve a session by username
     pub fn get_session_by_username(&self, conn: &Connection, username: &str) -> Option<Session> {
         match queries::get_session(conn, username) {
