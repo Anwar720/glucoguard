@@ -1,12 +1,117 @@
 // SQLite Database initializaiton and connection management
 
+#[derive(Debug)]
+struct User{
+    id: i32,
+    user_name: String,
+    password_hash: String,
+    role: String,
+    created_at: String,
+    last_login: Option<String>
+}
+struct Patient{
+    patient_id: i32,
+    first_name: String,
+    last_name: String,
+    date_of_birth: String,
+    basal_rate: f32,
+    bolus_rate: f32,
+    max_dosage: f32,
+    low_glucose_threshold: f32,
+    high_glucose_threshold: f32,
+    clinician_id: i32,
+    caretaker_id: i32
+}
+struct PatientCareTeam{
+    care_taker_id: i32,
+    patient_id_list: Vec<i32>
+}
+struct GlucoseReading{
+    reading_id: i32,
+    patient_id: i32,
+    glucose_level: f32,
+    reading_time: String,
+    status: String
+}
+struct InsulinLog{
+    dosage_id: i32,
+    patient_id: i32,
+    action_type: String,
+    dosage_units: f32,
+    requested_by: String,
+    dosage_time: String
+}
+struct Alerts{
+    alert_id: i32,
+    patient_id: i32,
+    alert_type: String,
+    alert_message: String,
+    alert_time: String,
+    is_resolved: bool,
+    resolved_by: Option<String>,
+}
+struct MealLog{
+    meal_id: i32,
+    patient_id: i32,
+    carbohydrate_amount: f32,
+    meal_time: String
+}
+struct Session{
+    session_id: i32,
+    user_id: i32,
+    creation_time: String,
+    expiration_time: Option<String>
+}
+//-----------------------Database insert functions-----------------------//
+pub fn create_patient(
+    conn: &rusqlite::Connection,
+    full_name: &str,
+    date_of_birth: &str,
+    basal_rate: f32,
+    bolus_rate: f32,
+) -> rusqlite::Result<i64> {
+    let mut parts = full_name.split_whitespace();
+    let first_name = parts.next().unwrap_or("").to_string();
+    let last_name = parts.last().unwrap_or("").to_string();
+
+    let max_dosage: f32 = 10.0;
+    let low_glucose_threshold: f32 = 70.0;
+    let high_glucose_threshold: f32 = 180.0;
+    let clinician_id: i32 = 0;
+    let caretaker_id: i32 = 0;
+
+    let sql = "
+        INSERT INTO patients
+            (first_name, last_name, date_of_birth,
+             basal_rate, bolus_rate, max_dosage,
+             low_glucose_threshold, high_glucose_threshold,
+             clinician_id, caretaker_id)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+    ";
+
+    conn.execute(sql, rusqlite::params![
+        first_name,
+        last_name,
+        date_of_birth,
+        basal_rate,
+        bolus_rate,
+        max_dosage,
+        low_glucose_threshold,
+        high_glucose_threshold,
+        clinician_id,
+        caretaker_id
+    ])?;
+
+    Ok(conn.last_insert_rowid())
+}
+
 
 //-----------------------Database table creation functions-----------------------//
 fn create_users_table(conn:&rusqlite::Connection)->rusqlite::Result<()> { 
     // SQL to create users table
     let sql = "
         CREATE TABLE IF NOT EXISTS users (
-            id TEXT NOT NULL PRIMARY KEY ,
+            id INTEGER PRIMARY KEY,
             user_name TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL,
@@ -70,6 +175,21 @@ fn create_insulin_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     conn.execute(sql, [])?;
     Ok(())
 }
+
+fn create_insulin_requests_table(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+    let sql = "
+        CREATE TABLE IF NOT EXISTS insulin_requests (
+            request_id INTEGER PRIMARY KEY UNIQUE,
+            patient_id INTEGER NOT NULL,
+            clinician_id INTEGER NOT NULL,
+            dose_requested REAL NOT NULL,
+            request_date TEXT NOT NULL DEFAULT (datetime('now')),
+            insulin_type TEXT NOT NULL
+        )";
+    conn.execute(sql, [])?;
+    Ok(())
+}
+
 fn create_alerts_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     let sql = "
         CREATE TABLE IF NOT EXISTS alerts (
@@ -84,6 +204,7 @@ fn create_alerts_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     conn.execute(sql, [])?;
     Ok(())
 }
+
 fn create_meal_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     let sql = "
         CREATE TABLE IF NOT EXISTS meal_logs (
@@ -95,7 +216,9 @@ fn create_meal_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     conn.execute(sql, [])?;
     Ok(())
 }
+
 pub fn create_session_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
+    println!("Creating session table...");
     let sql = "
         CREATE TABLE IF NOT EXISTS sessions (
             session_id INTEGER PRIMARY KEY UNIQUE,
@@ -113,11 +236,12 @@ pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     create_patients_table(conn)?;
     create_patient_care_team_table(conn)?;
     create_glucose_readings_table(conn)?;
+    create_insulin_requests_table(conn)?; 
     create_insulin_logs_table(conn)?;
     create_alerts_table(conn)?;
     create_meal_logs_table(conn)?;
     create_session_table(conn)?;
-    println!("Successfully connected to database...");
+    println!("Database initialized successfully.");
     Ok(())
 }
 
@@ -128,11 +252,10 @@ pub fn establish_connection() -> rusqlite::Result<rusqlite::Connection>{
      // Open the database connection
     let connection = rusqlite::Connection::open("./data/database.db")?;
     
-  // Initialize database tables if they don't exist
+    // Initialize database tables if they don't exist
     initialize_database(&connection)?;
     
     Ok(connection)
 }
-
 
 
