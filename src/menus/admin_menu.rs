@@ -5,11 +5,12 @@ use crate::menus::menu_utils::get_new_account_credentials;
 use crate::session::SessionManager;
 use rusqlite::Connection;
 
-pub fn show_admin_menu(conn: &Connection, _role: &Role, session_id: &str) {
-    let session_manager = SessionManager::new();
-
+pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) {
+    
     loop {
-        // Fetch session from the database
+
+        let session_manager = SessionManager::new();
+    // Fetch session from the database
         let session = match session_manager.get_session_by_id(conn, session_id) {
             Some(s) => s,
             None => {
@@ -28,15 +29,17 @@ pub fn show_admin_menu(conn: &Connection, _role: &Role, session_id: &str) {
         println!("1. Create Clinician Account");
         println!("2. View Clinician Account List");
         println!("3. Logout");
-
+        print!("Enter your choice: ");
         let choice = utils::get_user_choice();
 
         match choice {
             1 => {
-                // Create a new clinician account
+
+                // Get username and password input from user
                 match get_new_account_credentials() {
                     Ok((username, password)) => {
-                        match queries::create_user(conn, &username, &password, "clinician") {
+                        // Create the user in the database
+                        match queries::create_user(&conn, &username, &password, "clinician",None) {
                             Ok(_) => println!("\nClinician account successfully created."),
                             Err(e) => println!("\nError creating account: {}", e),
                         }
@@ -56,7 +59,8 @@ pub fn show_admin_menu(conn: &Connection, _role: &Role, session_id: &str) {
                     }
                     Err(e) => println!("Failed to fetch clinicians: {}", e),
                 }
-            }
+
+            }, 
 
             3 => {
                 println!("Logging out...");
@@ -67,9 +71,8 @@ pub fn show_admin_menu(conn: &Connection, _role: &Role, session_id: &str) {
                     println!("Session removed. Goodbye!");
                 }
                 return;
-            }
-
-            _ => println!("Invalid choice, please try again."),
+            },
+            _ => println!("Invalid choice"),
         }
     }
 }

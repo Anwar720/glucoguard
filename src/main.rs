@@ -4,12 +4,14 @@ mod menus;
 mod auth;
 mod utils;
 mod access_control;
-use crate::session::SessionManager;
+mod input_validation;
 use crate::db::db_utils;
 use crate::db::initialize;
 // use crate::access_control;
-use crate::menus::{login_menu,admin_menu,patient_menu,caretaker_menu,clinician_menu};
-
+use crate::menus::{login_menu,admin_menu,patient_menu,
+                  caretaker_menu,clinician_menu,home_menu,signup_menu};
+mod session;
+use crate::session::SessionManager;
 
 
 fn main() {
@@ -31,20 +33,42 @@ println!("{}", logo);
 
    // db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 
-    //validate login and get user id and role
-    let user_option = login_menu::show_login_menu(&db_connection);
-    // create a user permission instance
-    let role = access_control::Role::new(&user_option.role);
+    loop {
+      // ask user if they want to login or signup 
+      let user_choice = home_menu::show_home_menu();
+        match user_choice {
+            1 => {
+                // Sign In
+                let login_result: login_menu::LoginResult = login_menu::show_login_menu(&db_connection);
 
-    let session_manager = SessionManager::new();
+                if login_result.success {
+                    // create a role/permission instance
+                    let role = access_control::Role::new(&login_result.role, &login_result.user_id);
+                    //create session manager
+                    let session_manager = SessionManager::new();
 
-    match role.name.as_str() {
-    "admin" => admin_menu::show_admin_menu(&db_connection, &role, &user_option.session_id),
-    "clinician" => clinician_menu::show_clinician_menu(&db_connection, &user_option.session_id),
-    "patient" => patient_menu::show_patient_menu(&db_connection, &user_option.session_id),
-    "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &user_option.session_id),
-    _ => {
-      // log error
-      }
+                    match role.name.as_str() {
+                        "admin" => admin_menu::show_admin_menu(&db_connection, &role,&login_result.session_id),
+                        "clinician" => clinician_menu::show_clinician_menu(&db_connection, &role,&login_result.session_id),
+                        "patient" => patient_menu::show_patient_menu(&db_connection, &role,&login_result.session_id),
+                        "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &role,&login_result.session_id),
+                        _ => eprintln!(" Unknown role: {}", role.name),
+                    }
+                }
+            }
+            2 => {
+                // Sign Up
+                signup_menu::show_signup_menu(&db_connection);
+            }
+            0 => {
+                // Exit option
+                println!("Exiting program. Goodbye!");
+                break;
+            }
+            _ => {
+                println!(" Invalid option. Please select a valid choice.");
+            }
+        }
+        // After login or signup, loop will repeat showing home menu again
     }
 }

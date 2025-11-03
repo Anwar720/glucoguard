@@ -4,7 +4,7 @@ use argon2::{
     Argon2
 };
 use rand::rngs::OsRng;
-
+use rand::{distributions::Alphanumeric, Rng};
 
 // hash password using Argon2
 pub fn hash_password(password: &str) -> Result<String, PasswordHashError> {
@@ -56,4 +56,11 @@ pub fn verify_password(password: &str, hashed_password: &str) -> Result<bool, Pa
     }
 }
 
-
+pub fn generate_one_time_code(size:usize)-> String {
+    // Generate a secure random alphanumeric string of size length
+    rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(size)
+        .map(char::from)
+        .collect()
+}

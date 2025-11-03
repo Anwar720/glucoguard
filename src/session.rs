@@ -14,7 +14,7 @@ Store active sessions in memory (or optionally persist to disk)
 #[derive(Clone, Debug)]
 pub struct Session {
     pub session_id: String,
-    pub username: String,
+    pub user_id: String,
     pub create_time: SystemTime,
     pub exp_time: Duration,
 }
@@ -35,7 +35,7 @@ impl SessionManager {
     }
 
     // Create a new session and persist it in the DB
-    pub fn create_session(&self, conn: &Connection, username: String) -> rusqlite::Result<String> {
+    pub fn create_session(&self, conn: &Connection, user_id: String) -> rusqlite::Result<String> {
         // Generate a random session token
         let mut bytes = [0u8; 32];
         rand::thread_rng().fill_bytes(&mut bytes);
@@ -44,20 +44,19 @@ impl SessionManager {
         // Create session
         let session = Session {
             session_id: session_id.clone(),
-            username,
+            user_id,
             create_time: SystemTime::now(),
             exp_time: Duration::from_secs(60 * 60), // 1 hour
         };
 
-        // Store directly in DB
+        // Store directly in DB (no async)
         queries::add_session_to_db(conn, &session)?;
 
         Ok(session_id)
     }
-
     // Retrieve a session by username
-    pub fn get_session_by_username(&self, conn: &Connection, username: &str) -> Option<Session> {
-        match queries::get_session(conn, username) {
+    pub fn get_session_by_username(&self, conn: &Connection, user_id: &str) -> Option<Session> {
+        match queries::get_session(conn, user_id) {
             Ok(Some(session)) if !session.is_expired() => Some(session),
             _ => None,
         }
@@ -79,9 +78,8 @@ impl SessionManager {
         queries::remove_session(conn, session_id)
     }
 
-    // Periodic cleanup task
-    //will be called in run_cleanup to remove
-    //expired sessions
+    // Periodic cleanup task (removes expired sessions)
+
     pub fn cleanup_expired_sessions(&self, conn: &Connection) -> rusqlite::Result<()> {
         queries::remove_expired_sessions(conn)
     }
@@ -89,7 +87,6 @@ impl SessionManager {
     // Run cleanup in a background thread every 60 seconds
     pub fn run_cleanup(&self, db_path: &str) {
         let db_path = db_path.to_string();
-        //create a new thread and remove expired sessions
         std::thread::spawn(move || loop {
             match Connection::open(&db_path) {
                 Ok(conn) => {

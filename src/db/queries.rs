@@ -3,13 +3,15 @@ use crate::db::models::{User,Patient};
 use uuid::Uuid;
 use crate::auth;
 use chrono::Utc;
-use rusqlite::{Result,params,Connection};
+use rusqlite::{params, Connection, Result, OptionalExtension};
+use crate::utils::{get_current_time_string};
+use std::error::Error;
 use crate::session::Session;
 use std::time::UNIX_EPOCH;
 use tokio::time::Duration;
 
 // check if username exists and return boolean
-fn check_user_name_exists(conn: &rusqlite::Connection, username: &str) -> Result<bool> {
+pub fn check_user_name_exists(conn: &rusqlite::Connection, username: &str) -> Result<bool> {
     // Prepare returns a Result<Statement, Error>, so unwrap or use `?`
     let mut stmt = conn.prepare("SELECT COUNT(*) FROM users WHERE user_name = ?1")?;
     // Now stmt is a Statement, so you can call query_row on it
@@ -20,28 +22,65 @@ fn check_user_name_exists(conn: &rusqlite::Connection, username: &str) -> Result
 
 
 // create user using username, password, and role and insert into database
-pub fn create_user(conn: &rusqlite::Connection, username: &str, password: &str, role: &str) -> Result<()> {
-   // Check if username already exists
+// pass user_id as None  , to create a new user_id
+pub fn create_user(
+    conn: &Connection,
+    username: &str,
+    password: &str,
+    role: &str,
+    user_id: Option<String>, // optional user_id for creating accounts with user_id that exists in code_activation table.
+) -> Result<()> {
+    // Check if username already exists
     if check_user_name_exists(conn, username)? {
-        return Err(rusqlite::Error::ExecuteReturnedResults); 
+        eprintln!(" Username '{}' already exists.", username);
+        return Err(rusqlite::Error::ExecuteReturnedResults);
     }
-    // Hash the password
-    let password_hash = auth::hash_password(password)
-        .map_err(|_| rusqlite::Error::InvalidQuery)?;
 
-    // create new user instance
+    // Hash password
+    let password_hash = match auth::hash_password(password) {
+        Ok(hash) => hash,
+        Err(_) => {
+            eprintln!(" Failed to hash password.");
+            return Err(rusqlite::Error::InvalidQuery);
+        }
+    };
+
+    // Use provided user_id or generate new one
+    let user_id = user_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+
+    // Create new user
     let new_user = User {
-        id: Uuid::new_v4().to_string(),
+        id: user_id,
         user_name: username.to_string(),
-        password_hash: password_hash,
+        password_hash,
         role: role.to_string(),
         created_at: Utc::now().to_rfc3339(),
         last_login: None,
     };
-    let sql = "INSERT INTO users (id, user_name, password_hash, role, created_at, last_login) VALUES (?1, ?2, ?3, ?4, ?5, ?6)";
-    conn.execute(sql, params![new_user.id,new_user.user_name,new_user.password_hash,new_user.role,new_user.created_at,new_user.last_login])?;
+
+    // Insert user
+    let sql = "
+        INSERT INTO users (id, user_name, password_hash, role, created_at, last_login)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+    ";
+
+    conn.execute(
+        sql,
+        params![
+            new_user.id,
+            new_user.user_name,
+            new_user.password_hash,
+            new_user.role,
+            new_user.created_at,
+            new_user.last_login
+        ],
+    )?;
+
+    println!("User account successfull created.");
+
     Ok(())
 }
+
 
 // fetch user by username and return User struct
 pub fn get_user_by_username(conn: &rusqlite::Connection, username: &str) -> Result<Option<User>> {
@@ -84,8 +123,8 @@ pub fn get_all_clinicians(conn: &rusqlite::Connection) -> Result<Vec<String>> {
     Ok(usernames)
 }
 
-// create patient account from patient struct
-pub fn create_patient_account(conn: &rusqlite::Connection, patient: &Patient) -> Result<()> {
+// create patient account from patient object
+pub fn insert_patient_account_details_in_db(conn: &rusqlite::Connection, patient: &Patient) -> Result<()> {
     let sql = "
         INSERT INTO patients (
             patient_id,
@@ -121,7 +160,114 @@ pub fn create_patient_account(conn: &rusqlite::Connection, patient: &Patient) ->
 
     Ok(())
 }
+// insert patient activation code for patient to create account
+pub fn insert_activation_code(conn: &rusqlite::Connection,code: &str,user_type: &str,user_id: &str,issuer_id: &str) -> Result<()> {
+    let sql = "
+        INSERT INTO activation_codes(
+            code,
+            user_type,
+            user_id,
+            issuer_id,
+            created_at
+        ) VALUES (?1, ?2, ?3, ?4,?5)
+    ";
 
+    conn.execute(
+        sql,
+        params![code, user_type, user_id, issuer_id, get_current_time_string()],
+    )?;
+
+    Ok(())
+}
+
+#[derive(Debug)]
+pub struct PatientSummary {
+    pub patient_id: String,
+    pub first_name: String,
+    pub last_name: String,
+}
+
+pub fn get_patients_by_clinician_id(conn: &Connection, clinician_id: &String) -> Result<Vec<PatientSummary>, Box<dyn Error>> {
+    let mut stmt = conn.prepare(
+        "SELECT patient_id, first_name, last_name 
+        FROM patients 
+        WHERE clinician_id = ?1"
+    )?;
+
+    // get all patients with given clinician_id
+    let patient_iter = stmt.query_map([clinician_id], |row| {
+        Ok(PatientSummary {
+            patient_id: row.get(0)?,
+            first_name: row.get(1)?,
+            last_name: row.get(2)?,
+        })
+    })?;
+
+    // iterate through patient_iter and push patient structs into vector
+    let mut patients = Vec::new();
+    for patient in patient_iter {
+        patients.push(patient?);
+    }
+
+    Ok(patients)
+}
+
+    
+pub struct ActivationCodeInfo {
+    pub user_type: String,
+    pub user_id: String,
+}
+
+
+pub fn validate_activation_code(
+    conn: &Connection,
+    code: &str
+) -> Result<Option<ActivationCodeInfo>> {
+    let sql = "
+        SELECT user_type, user_id
+        FROM activation_codes
+        WHERE code = ?1
+    ";
+
+    let mut stmt = conn.prepare(sql)?;
+
+    // .optional() requires OptionalExtension trait
+    let info = stmt.query_row(params![code], |row| {
+        Ok(ActivationCodeInfo {
+            user_type: row.get(0)?,
+            user_id: row.get(1)?,
+        })
+    }).optional()?; // <-- now works
+
+    Ok(info)
+}
+
+// Removes an activation code from the database after it has been used
+pub fn remove_activation_code(conn: &Connection, code: &str) -> Result<()> {
+    let sql = "DELETE FROM activation_codes WHERE code = ?1";
+    
+    conn.execute(sql, params![code])?;
+    
+    Ok(())
+}
+
+/// Adds a caretaker team member to the database
+pub fn add_caretaker_team_member(
+    conn: &Connection,
+    caretaker_id: &str,
+    patient_id: &str, // comma-separated patient IDs
+) -> Result<()> {
+    let sql = "
+        INSERT INTO caretaker_team (care_taker_id, patient_id_list)
+        VALUES (?1, ?2)
+    ";
+
+    conn.execute(sql, params![caretaker_id, patient_id])?;
+
+    Ok(())
+}
+
+//----------session------------
 //add a session entry
 pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusqlite::Result<()> {
     // Convert create_time to UNIX timestamp
@@ -134,9 +280,9 @@ pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusq
     let expiration_time = session.exp_time.as_secs();
 
     let sql = "
-        INSERT INTO session (
+        INSERT INTO sessions (
             session_id,
-            username,
+            user_id,
             creation_time,
             expiration_time
         ) VALUES (?1, ?2, ?3, ?4)
@@ -146,7 +292,7 @@ pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusq
         sql,
         params![
             session.session_id,
-            session.username,
+            session.user_id,
             creation_time,
             expiration_time
         ]
@@ -157,19 +303,19 @@ pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusq
 
 //remove a session entry
 pub fn remove_session(conn: &rusqlite::Connection, session_id: &str) -> rusqlite::Result<()> {
-    let sql = "DELETE FROM session WHERE session_id = ?1";
+    let sql = "DELETE FROM sessions WHERE session_id = ?1";
     conn.execute(sql, [session_id])?;
     Ok(())
 }
 
 //get a session
-pub fn get_session(conn: &Connection, username: &str) -> Result<Option<Session>> {
+pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> {
     let mut stmt = conn.prepare(
-        "SELECT session_id, username, creation_time, expiration_time FROM session WHERE username = ?1"
+        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE user_id = ?1"
     )?;
-    
-    let mut rows = stmt.query([username])?;
-    
+
+    let mut rows = stmt.query([user_id])?;
+
     if let Some(row) = rows.next()? {
         let session_id: String = row.get(0)?;
         let username: String = row.get(1)?;
@@ -177,7 +323,7 @@ pub fn get_session(conn: &Connection, username: &str) -> Result<Option<Session>>
         let exp_time_secs: u64 = row.get(3)?;
         let session = Session {
             session_id,
-            username,
+            user_id:user_id.to_string(),
             create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
             exp_time: Duration::from_secs(exp_time_secs),
         };
@@ -190,20 +336,20 @@ pub fn get_session(conn: &Connection, username: &str) -> Result<Option<Session>>
 // fetch by session_id
 pub fn get_session_by_id(conn: &Connection, session_id: &str) -> Result<Option<Session>> {
     let mut stmt = conn.prepare(
-        "SELECT session_id, username, creation_time, expiration_time FROM session WHERE session_id = ?1"
+        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE session_id = ?1"
     )?;
 
     let mut rows = stmt.query([session_id])?;
 
     if let Some(row) = rows.next()? {
         let session_id: String = row.get(0)?;
-        let username: String = row.get(1)?;
+        let user_id: String = row.get(1)?;
         let create_time_secs: u64 = row.get(2)?;
         let exp_time_secs: u64 = row.get(3)?;
 
         Ok(Some(Session {
             session_id,
-            username,
+            user_id,
             create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
             exp_time: Duration::from_secs(exp_time_secs),
         }))
@@ -220,7 +366,7 @@ pub fn remove_expired_sessions(conn: &Connection) -> Result<()> {
         .as_secs();
 
     conn.execute(
-        "DELETE FROM session WHERE (?1 - creation_time) > expiration_time",
+        "DELETE FROM sessions WHERE (?1 - creation_time) > expiration_time",
         params![now_secs],
     )?;
     Ok(())
