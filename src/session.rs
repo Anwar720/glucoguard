@@ -1,4 +1,3 @@
-
 use std::time::{SystemTime, Duration};
 use crate::db::queries;
 use rusqlite::Connection;
@@ -50,11 +49,12 @@ impl SessionManager {
             exp_time: Duration::from_secs(60 * 60), // 1 hour
         };
 
-        // Store directly in DB (no async)
+        // Store directly in DB
         queries::add_session_to_db(conn, &session)?;
 
         Ok(session_id)
     }
+
     // Retrieve a session by username
     pub fn get_session_by_username(&self, conn: &Connection, username: &str) -> Option<Session> {
         match queries::get_session(conn, username) {
@@ -79,7 +79,9 @@ impl SessionManager {
         queries::remove_session(conn, session_id)
     }
 
-    // Periodic cleanup task (removes expired sessions)
+    // Periodic cleanup task
+    //will be called in run_cleanup to remove
+    //expired sessions
     pub fn cleanup_expired_sessions(&self, conn: &Connection) -> rusqlite::Result<()> {
         queries::remove_expired_sessions(conn)
     }
@@ -87,6 +89,7 @@ impl SessionManager {
     // Run cleanup in a background thread every 60 seconds
     pub fn run_cleanup(&self, db_path: &str) {
         let db_path = db_path.to_string();
+        //create a new thread and remove expired sessions
         std::thread::spawn(move || loop {
             match Connection::open(&db_path) {
                 Ok(conn) => {
