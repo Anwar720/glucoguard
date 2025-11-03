@@ -9,6 +9,7 @@ pub struct LoginResult {
     pub success: bool,
     pub user_id: String,
     pub role: String,
+    pub session_id: String
 }
 
 fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str) -> LoginResult{
@@ -17,6 +18,7 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str) -> Login
         success: false,
         user_id:String::new(),
         role:String::new(),
+        session_id: String::new()
     };
 
     // fetch user by username 
@@ -43,6 +45,7 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str) -> Login
                 success: true,
                 user_id: user.id,
                 role: user.role.to_string(),
+                session_id: String::new()
             };
         }
     }
@@ -52,6 +55,7 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str) -> Login
             success: false,
             user_id: String::new(),
             role: String::new(),
+            session_id: String::new(),
         }
     
 }
@@ -74,13 +78,14 @@ pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
         let password = password.trim().to_string();
 
         // call login function to validate username and password
-        let login_result = user_login(&conn,&username,&password);
+        let mut login_result = user_login(&conn,&username,&password);
         if login_result.success {
             //create a session on successful login
             // Create DB session
             match session_manager.create_session(conn, username.clone()) {
                 Ok(session_id) => {
-                    println!("Login successful. Session created: {}", session_id);
+                    login_result.session_id = session_id; // set session_id
+                    println!("Login successful. Session created: {}", login_result.session_id);
                     return login_result;
                 }
                 Err(e) => {

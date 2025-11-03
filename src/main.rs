@@ -27,6 +27,8 @@ println!("{}", logo);
 
     // Initialize the database connection
     let db_connection = initialize::establish_connection().unwrap();
+
+
    // db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 
     //validate login and get user id and role
@@ -35,15 +37,12 @@ println!("{}", logo);
     let role = access_control::Role::new(&user_option.role);
 
     let session_manager = SessionManager::new();
-    let session_id = session_manager
-        .create_session(&db_connection, user_option.user_id.clone())
-        .expect("Failed to create session");
 
     match role.name.as_str() {
-    "admin" => admin_menu::show_admin_menu(&db_connection, &role, &session_id),
-    "clinician" => clinician_menu::show_clinician_menu(&db_connection, &session_id),
-    "patient" => patient_menu::show_patient_menu(&db_connection, &session_id),
-    "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &session_id),
+    "admin" => admin_menu::show_admin_menu(&db_connection, &role, &user_option.session_id),
+    "clinician" => clinician_menu::show_clinician_menu(&db_connection, &user_option.session_id),
+    "patient" => patient_menu::show_patient_menu(&db_connection, &user_option.session_id),
+    "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &user_option.session_id),
     _ => {
       // log error
       }

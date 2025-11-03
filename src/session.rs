@@ -64,6 +64,9 @@ impl SessionManager {
     }
 
     // Retrieve a session by ID
+    //if the session exists it is returned
+    //if the session doesn't exist or expired
+    //None is returned
     pub fn get_session_by_id(&self, conn: &Connection, session_id: &str) -> Option<Session> {
         match queries::get_session_by_id(conn, session_id) {
             Ok(Some(session)) if !session.is_expired() => Some(session),
