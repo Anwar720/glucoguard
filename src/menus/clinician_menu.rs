@@ -56,6 +56,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
         match choice {
                 1 => {
                     //View logs of all insulin deliveries and glucose readings.
+
                 }, 
                 2 =>{
                     //Adjust insulin delivery parameters based on patient needs.
@@ -138,3 +139,8 @@ fn show_patients_menu(conn: &Connection, clinician_id: &String, session_id: &str
         }
     }
 }
+
+
+
+
+
