@@ -56,7 +56,6 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
         match choice {
                 1 => {
                     //View logs of all insulin deliveries and glucose readings.
-
                 }, 
                 2 =>{
                     //Adjust insulin delivery parameters based on patient needs.
@@ -72,7 +71,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
                 },
                 5=>{
                     // get patient data and create patient account 
-                    handle_patient_account_creation(&conn,role, &session_id);
+                    handle_patient_account_creation(&conn, role, &session_id);
                 },
                 6 => {
                     println!("Logging out...");
@@ -86,8 +85,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
                 _ => println!("Invalid choice"),
             }
         }
-    
-
+    }
 }
 
 fn handle_patient_account_creation(conn:&rusqlite::Connection, role:&Role, session_id: &str){
@@ -139,8 +137,3 @@ fn show_patients_menu(conn: &Connection, clinician_id: &String, session_id: &str
         }
     }
 }
-
-
-
-
-
