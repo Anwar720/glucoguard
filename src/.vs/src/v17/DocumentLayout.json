@@ -51,21 +51,7 @@
               "RelativeToolTip": "menus\\clinician_menu.rs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAATAAAAAAAAAA==",
               "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
-              "WhenOpened": "2025-11-03T05:04:59.354Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "queries.rs",
-              "DocumentMoniker": "C:\\Users\\honor\\projects\\glucoguard\\src\\db\\queries.rs",
-              "RelativeDocumentMoniker": "db\\queries.rs",
-              "ToolTip": "C:\\Users\\honor\\projects\\glucoguard\\src\\db\\queries.rs",
-              "RelativeToolTip": "db\\queries.rs",
-              "ViewState": "AgIAALcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
-              "WhenOpened": "2025-11-03T05:04:17.521Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-03T05:04:59.354Z"
             },
             {
               "$type": "Document",
@@ -77,7 +63,25 @@
               "RelativeToolTip": "session.rs",
               "ViewState": "AgIAACQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
-              "WhenOpened": "2025-11-03T05:04:03.114Z",
+              "WhenOpened": "2025-11-03T05:04:03.114Z"
+            }
+          ]
+        },
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "queries.rs",
+              "DocumentMoniker": "C:\\Users\\honor\\projects\\glucoguard\\src\\db\\queries.rs",
+              "RelativeDocumentMoniker": "db\\queries.rs",
+              "ToolTip": "C:\\Users\\honor\\projects\\glucoguard\\src\\db\\queries.rs",
+              "RelativeToolTip": "db\\queries.rs",
+              "ViewState": "AgIAALcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
+              "WhenOpened": "2025-11-03T05:04:17.521Z",
               "EditorCaption": ""
             }
           ]
