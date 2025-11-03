@@ -98,10 +98,10 @@ fn create_meal_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
 fn create_session_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     let sql = "
         CREATE TABLE IF NOT EXISTS sessions (
-            session_id INTEGER PRIMARY KEY UNIQUE,
-            user_id INTEGER NOT NULL,
-            creation_time TEXT NOT NULL,
-            expiration_time TEXT
+            session_id TEXT PRIMARY KEY UNIQUE,
+            user_id TEXT NOT NULL,
+            creation_time BIGINT NOT NULL,
+            expiration_time INT
         )";
     conn.execute(sql, [])?;
     Ok(())

@@ -4,7 +4,6 @@ use chrono::Utc;
 
 // reads user choice from menu table and returns as integer
 pub fn get_user_choice() -> i32 {
-    print!("Enter your choice: ");
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
     input.trim().parse::<i32>().unwrap_or(0)

@@ -14,3 +14,4 @@ chrono = { version = "0.4", features = ["serde", "clock"] }
 dotenv = "0.15"
 rpassword = "7.3"
 regex = "1.11.1"
+hex = "0.4.3"

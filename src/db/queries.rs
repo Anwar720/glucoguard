@@ -6,6 +6,9 @@ use chrono::Utc;
 use rusqlite::{params, Connection, Result,OptionalExtension};
 use crate::utils::{get_current_time_string};
 use std::error::Error;
+use crate::session::Session;
+use std::time::UNIX_EPOCH;
+use tokio::time::Duration;
 
 
 // check if username exists and return boolean
@@ -264,5 +267,111 @@ pub fn add_caretaker_team_member(
 
     conn.execute(sql, params![caretaker_id, patient_id])?;
 
+    Ok(())
+}
+
+
+//----------session------------
+//add a session entry
+pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusqlite::Result<()> {
+    // Convert create_time to UNIX timestamp
+    let creation_time = session.create_time
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    // Convert expiration_time to seconds
+    let expiration_time = session.exp_time.as_secs();
+
+    let sql = "
+        INSERT INTO sessions (
+            session_id,
+            user_id,
+            creation_time,
+            expiration_time
+        ) VALUES (?1, ?2, ?3, ?4)
+    ";
+
+    conn.execute(
+        sql,
+        params![
+            session.session_id,
+            session.user_id,
+            creation_time,
+            expiration_time
+        ]
+    )?;
+
+    Ok(())
+}
+
+//remove a session entry
+pub fn remove_session(conn: &rusqlite::Connection, session_id: &str) -> rusqlite::Result<()> {
+    let sql = "DELETE FROM sessions WHERE session_id = ?1";
+    conn.execute(sql, [session_id])?;
+    Ok(())
+}
+
+//get a session
+pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> {
+    let mut stmt = conn.prepare(
+        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE user_id = ?1"
+    )?;
+
+    let mut rows = stmt.query([user_id])?;
+
+    if let Some(row) = rows.next()? {
+        let session_id: String = row.get(0)?;
+        let username: String = row.get(1)?;
+        let create_time_secs: u64 = row.get(2)?;
+        let exp_time_secs: u64 = row.get(3)?;
+        let session = Session {
+            session_id,
+            user_id:user_id.to_string(),
+            create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
+            exp_time: Duration::from_secs(exp_time_secs),
+        };
+        Ok(Some(session))
+    } else {
+        Ok(None) //session not found
+    }
+}
+
+// fetch by session_id
+pub fn get_session_by_id(conn: &Connection, session_id: &str) -> Result<Option<Session>> {
+    let mut stmt = conn.prepare(
+        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE session_id = ?1"
+    )?;
+
+    let mut rows = stmt.query([session_id])?;
+
+    if let Some(row) = rows.next()? {
+        let session_id: String = row.get(0)?;
+        let user_id: String = row.get(1)?;
+        let create_time_secs: u64 = row.get(2)?;
+        let exp_time_secs: u64 = row.get(3)?;
+
+        Ok(Some(Session {
+            session_id,
+            user_id,
+            create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
+            exp_time: Duration::from_secs(exp_time_secs),
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+// remove expired sessions
+pub fn remove_expired_sessions(conn: &Connection) -> Result<()> {
+    let now_secs = std::time::SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    conn.execute(
+        "DELETE FROM sessions WHERE (?1 - creation_time) > expiration_time",
+        params![now_secs],
+    )?;
     Ok(())
 }

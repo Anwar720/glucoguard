@@ -9,7 +9,8 @@ use crate::db::initialize;
 // use crate::access_control;
 use crate::menus::{login_menu,admin_menu,patient_menu,
                   caretaker_menu,clinician_menu,home_menu,signup_menu};
-
+mod session;
+use crate::session::SessionManager;
 
 
 fn main() {
@@ -41,13 +42,15 @@ println!("{}", logo);
                 if login_result.success {
                     // create a role/permission instance
                     let role = access_control::Role::new(&login_result.role, &login_result.user_id);
+                    //create session manager
+                    let session_manager = SessionManager::new();
 
                     match role.name.as_str() {
-                        "admin" => admin_menu::show_admin_menu(&db_connection, &role),
-                        "clinician" => clinician_menu::show_clinician_menu(&db_connection, &role),
-                        "patient" => patient_menu::show_patient_menu(&db_connection, &role),
-                        "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &role),
-                        _ => eprintln!("⚠️ Unknown role: {}", role.name),
+                        "admin" => admin_menu::show_admin_menu(&db_connection, &role,&login_result.session_id),
+                        "clinician" => clinician_menu::show_clinician_menu(&db_connection, &role,&login_result.session_id),
+                        "patient" => patient_menu::show_patient_menu(&db_connection, &role,&login_result.session_id),
+                        "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &role,&login_result.session_id),
+                        _ => eprintln!(" Unknown role: {}", role.name),
                     }
                 }
             }

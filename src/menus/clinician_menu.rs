@@ -7,6 +7,7 @@ use crate::db::queries::{insert_activation_code,
                         insert_patient_account_details_in_db,
                         get_patients_by_clinician_id};
 use rusqlite::{Connection};
+use crate::session::SessionManager;
 
 //Takes in db connection and role struct:
     // Role{
@@ -14,13 +15,53 @@ use rusqlite::{Connection};
     //      id: String, // user id 
     //      permissions: HashSet<Permission>,
     // }
-pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role) {
+pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &str) {
+    
+    let session_manager = SessionManager::new();
+
     loop {
+        // Fetch session from the database
+        let session = match session_manager.get_session_by_id(conn, session_id) {
+            Some(s) => s,
+            None => {
+                println!("Invalid or expired session. Please log in again.");
+                return;
+            }
+        };
+
+        // Check if session is expired
+        if session.is_expired() {
+            println!("Session has expired. Logging you out...");
+            if let Err(e) = session_manager.remove_session(conn, session_id) {
+                println!("Failed to remove session: {}", e);
+            }
+            return;
+        }
+
+         // Fetch session from the database
+        let session = match session_manager.get_session_by_id(conn, session_id) {
+            Some(s) => s,
+            None => {
+                println!("Invalid or expired session. Please log in again.");
+                return;
+            }
+        };
+
+        // Check if session is expired
+        if session.is_expired() {
+            println!("Session has expired. Logging you out...");
+            if let Err(e) = session_manager.remove_session(conn, session_id) {
+                println!("Failed to remove session: {}", e);
+            }
+            return;
+        }
+
+
         println!("=== Clinician Menu ===");
         println!("1. View Patients");
         println!("2. Create Patient Account");
         println!("3. Logout");
-
+        print!("Enter your choice: ");
         let choice = utils::get_user_choice();
 
         match choice {
@@ -30,7 +71,15 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role) {
             2 =>{ // get patient data and create patient account 
                 handle_patient_account_creation(&conn,role);
             },
-            3 => break,
+            3 => {
+                println!("Logging out...");
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
+                    println!("Failed to remove session: {}", e);
+                } else {
+                    println!("Session removed. Goodbye!");
+                }
+                return;
+            },
             _ => println!("Invalid choice"),
         }
     }
