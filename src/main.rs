@@ -6,7 +6,6 @@ mod access_control;
 mod input_validation;
 use crate::db::db_utils;
 use crate::db::initialize;
-// use crate::access_control;
 use crate::menus::{login_menu,admin_menu,patient_menu,
                   caretaker_menu,clinician_menu,home_menu,signup_menu};
 mod session;
@@ -28,12 +27,14 @@ println!("{}", logo);
 
     // Initialize the database connection
     let db_connection = initialize::establish_connection().unwrap();
+
+
    // db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 
     loop {
       // ask user if they want to login or signup 
-    let user_choice = home_menu::show_home_menu();
 
+    let user_choice = home_menu::show_home_menu();
         match user_choice {
             1 => {
                 // Sign In
@@ -67,9 +68,6 @@ println!("{}", logo);
                 println!(" Invalid option. Please select a valid choice.");
             }
         }
-
         // After login or signup, loop will repeat showing home menu again
     }
-    
-
 }

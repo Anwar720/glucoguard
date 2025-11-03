@@ -3,13 +3,14 @@ use crate::db::models::{User,Patient};
 use uuid::Uuid;
 use crate::auth;
 use chrono::Utc;
-use rusqlite::{params, Connection, Result,OptionalExtension};
+use rusqlite::{params, Connection, Result, OptionalExtension};
 use crate::utils::{get_current_time_string};
 use std::error::Error;
-use crate::session::Session;
+use crate::session::{Session, SessionManager};
+use crate::access_control::Role;
+use crate::access_control::Permission;
 use std::time::UNIX_EPOCH;
 use tokio::time::Duration;
-
 
 // check if username exists and return boolean
 pub fn check_user_name_exists(conn: &rusqlite::Connection, username: &str) -> Result<bool> {
@@ -125,7 +126,36 @@ pub fn get_all_clinicians(conn: &rusqlite::Connection) -> Result<Vec<String>> {
 }
 
 // create patient account from patient object
-pub fn insert_patient_account_details_in_db(conn: &rusqlite::Connection, patient: &Patient) -> Result<()> {
+pub fn insert_patient_account_details_in_db(
+    conn: &rusqlite::Connection,
+    patient: &Patient,
+    session_id: &str,
+) -> rusqlite::Result<()> {
+
+    let required_permission = Permission::CreatePatientAccount;
+    let session_manager = SessionManager::new();
+
+    // Retrieve session
+    let opt_session: Option<Session> = session_manager.get_session_by_id(conn, session_id);
+    let session: Session = opt_session
+        .ok_or(rusqlite::Error::InvalidQuery)?;
+
+    // Check if session is expired
+    if session.is_expired() {
+        eprintln!("Session has expired!");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
+    // Convert session.role (String) into Role
+    let role: Role = Role::new(&session.role,&session.user_id);
+
+    // Check permission
+    if !session_manager.check_permissions(conn, session_id, &role, required_permission) {
+        eprintln!("Access denied: insufficient permissions.");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
+    // Insert patient into DB
     let sql = "
         INSERT INTO patients (
             patient_id,
@@ -144,7 +174,7 @@ pub fn insert_patient_account_details_in_db(conn: &rusqlite::Connection, patient
 
     conn.execute(
         sql,
-        params![
+        rusqlite::params![
             patient.patient_id,
             patient.first_name,
             patient.last_name,
@@ -156,9 +186,10 @@ pub fn insert_patient_account_details_in_db(conn: &rusqlite::Connection, patient
             patient.high_glucose_threshold,
             patient.clinician_id,
             patient.caretaker_id
-        ]
+        ],
     )?;
 
+    println!("Patient account successfully created.");
     Ok(())
 }
 
@@ -253,7 +284,6 @@ pub fn remove_activation_code(conn: &Connection, code: &str) -> Result<()> {
     Ok(())
 }
 
-
 /// Adds a caretaker team member to the database
 pub fn add_caretaker_team_member(
     conn: &Connection,
@@ -269,7 +299,6 @@ pub fn add_caretaker_team_member(
 
     Ok(())
 }
-
 
 //----------session------------
 //add a session entry
@@ -287,9 +316,10 @@ pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusq
         INSERT INTO sessions (
             session_id,
             user_id,
+            role,
             creation_time,
             expiration_time
-        ) VALUES (?1, ?2, ?3, ?4)
+        ) VALUES (?1, ?2, ?3, ?4, ?5)
     ";
 
     conn.execute(
@@ -297,6 +327,7 @@ pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusq
         params![
             session.session_id,
             session.user_id,
+            session.role,
             creation_time,
             expiration_time
         ]
@@ -315,7 +346,7 @@ pub fn remove_session(conn: &rusqlite::Connection, session_id: &str) -> rusqlite
 //get a session
 pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> {
     let mut stmt = conn.prepare(
-        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE user_id = ?1"
+        "SELECT session_id, user_id, role, creation_time, expiration_time FROM sessions WHERE user_id = ?1"
     )?;
 
     let mut rows = stmt.query([user_id])?;
@@ -323,10 +354,12 @@ pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> 
     if let Some(row) = rows.next()? {
         let session_id: String = row.get(0)?;
         let username: String = row.get(1)?;
-        let create_time_secs: u64 = row.get(2)?;
-        let exp_time_secs: u64 = row.get(3)?;
+        let role: String = row.get(2)?;
+        let create_time_secs: u64 = row.get(3)?;
+        let exp_time_secs: u64 = row.get(4)?;
         let session = Session {
             session_id,
+            role,
             user_id:user_id.to_string(),
             create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
             exp_time: Duration::from_secs(exp_time_secs),
@@ -340,7 +373,7 @@ pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> 
 // fetch by session_id
 pub fn get_session_by_id(conn: &Connection, session_id: &str) -> Result<Option<Session>> {
     let mut stmt = conn.prepare(
-        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE session_id = ?1"
+        "SELECT session_id, user_id, role, creation_time, expiration_time FROM sessions WHERE session_id = ?1"
     )?;
 
     let mut rows = stmt.query([session_id])?;
@@ -348,12 +381,14 @@ pub fn get_session_by_id(conn: &Connection, session_id: &str) -> Result<Option<S
     if let Some(row) = rows.next()? {
         let session_id: String = row.get(0)?;
         let user_id: String = row.get(1)?;
-        let create_time_secs: u64 = row.get(2)?;
-        let exp_time_secs: u64 = row.get(3)?;
+        let role: String = row.get(2)?;
+        let create_time_secs: u64 = row.get(3)?;
+        let exp_time_secs: u64 = row.get(4)?;
 
         Ok(Some(Session {
             session_id,
             user_id,
+            role,
             create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
             exp_time: Duration::from_secs(exp_time_secs),
         }))
@@ -375,3 +410,25 @@ pub fn remove_expired_sessions(conn: &Connection) -> Result<()> {
     )?;
     Ok(())
 }
+
+/// Adds or updates the clinician_id for a given patient.
+pub fn add_caretaker_to_patient_account(conn: &Connection, patient_id: &str, caretaker_id: &str) -> Result<()> {
+    // // Check if the patient exists
+    // let mut stmt = conn.prepare("SELECT COUNT(*) FROM patients WHERE id = ?1")?;
+    // let patient_count: i64 = stmt.query_row(params![patient_id], |row| row.get(0))?;
+
+    // if patient_count == 0 {
+    //     println!(" Patient not found.");
+    //     return Ok(()); 
+    // }
+    // Update clinician_id
+    conn.execute(
+        "UPDATE patients SET caretaker_id = ?1 WHERE patient_id = ?2",
+        params![caretaker_id, patient_id],
+    )?;
+    println!("Caretaker successfully assigned to patient.");
+
+    Ok(())
+}
+
+

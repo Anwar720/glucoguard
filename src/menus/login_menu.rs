@@ -12,8 +12,6 @@ pub struct LoginResult {
     pub session_id: String
 }
 
-
-
 pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
     println!("\n --------------- Login ---------------");
     loop{
@@ -35,9 +33,8 @@ pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
 
         if login_result.success {
             //create a session on successful login
-
             // Create DB session
-            match session_manager.create_session(conn, login_result.user_id.clone()) {
+            match session_manager.create_session(conn, login_result.user_id.clone(), login_result.role.clone()) {
                 Ok(session_id) => {
                     login_result.session_id = session_id; // set session_id
                     println!("Login successful. Session created: {}", login_result.session_id);
@@ -54,8 +51,6 @@ pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
         println!("Username or Password is incorrect.");
     }
 }
-
-
 
 fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginResult{
     //return template for failed login 
@@ -102,5 +97,4 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginR
             role: String::new(),
             session_id: String::new()
         }
-    
 }

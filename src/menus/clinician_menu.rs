@@ -1,4 +1,3 @@
-
 use crate::utils;
 use crate::menus::menu_utils;
 use crate::access_control::Role;
@@ -16,7 +15,6 @@ use crate::session::SessionManager;
     //      permissions: HashSet<Permission>,
     // }
 pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &str) {
-    
     let session_manager = SessionManager::new();
 
     loop {
@@ -58,41 +56,57 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
 
 
         println!("=== Clinician Menu ===");
-        println!("1. View Patients");
-        println!("2. Create Patient Account");
-        println!("3. Logout");
+        println!("1. View patient insulin history.");
+        println!("2. Edit patient Parameters");// 
+        println!("3. Edit limits.");
+        println!("4. Edit default alerts");//Set alert defaults for low and high blood sugar events.
+        println!("5. Create Patient Account");
+        println!("6. Logout");
+        
         print!("Enter your choice: ");
         let choice = utils::get_user_choice();
 
         match choice {
-            1 => {
-                show_patients_menu(conn,&role.id);
-            }, // Placeholder for actual functionality
-            2 =>{ // get patient data and create patient account 
-                handle_patient_account_creation(&conn,role);
-            },
-            3 => {
-                println!("Logging out...");
-                if let Err(e) = session_manager.remove_session(conn, session_id) {
-                    println!("Failed to remove session: {}", e);
-                } else {
-                    println!("Session removed. Goodbye!");
-                }
-                return;
-            },
-            _ => println!("Invalid choice"),
+                1 => {
+                    //View logs of all insulin deliveries and glucose readings.
+                }, 
+                2 =>{
+                    //Adjust insulin delivery parameters based on patient needs.
+                    // basal and bolus modifications
+            
+                },
+                3=>{
+                    //Set dosage limits, safety thresholds, and alert conditions.
+                    // modify max and min 
+                },
+                4=>{
+                    //
+                },
+                5=>{
+                    // get patient data and create patient account 
+                    handle_patient_account_creation(&conn,role, &session_id);
+                },
+                6 => {
+                    println!("Logging out...");
+                    if let Err(e) = session_manager.remove_session(conn, session_id) {
+                        println!("Failed to remove session: {}", e);
+                    } else {
+                        println!("Session removed. Goodbye!");
+                    }
+                    return;
+                },
+                _ => println!("Invalid choice"),
+            }
         }
-    }
+    
+
 }
 
-
-
-fn handle_patient_account_creation(conn:&rusqlite::Connection,role:&Role){
+fn handle_patient_account_creation(conn:&rusqlite::Connection,role:&Role, session_id: &str){
     let patient = menu_utils::get_new_patient_input(role.id.clone());
 
-
     //insert patient data in db and check if successfully inserted
-    match insert_patient_account_details_in_db(&conn,&patient){
+    match insert_patient_account_details_in_db(&conn, &patient, &session_id){
         Ok(())=>{
             let patient_activation_code = generate_one_time_code(15);
             let new_account_type = "patient";
@@ -115,7 +129,6 @@ fn handle_patient_account_creation(conn:&rusqlite::Connection,role:&Role){
             println!("Error creating patient activation link");
         },
     }
-
 }
 
 fn show_patients_menu(conn: &Connection, clinician_id: &String) {

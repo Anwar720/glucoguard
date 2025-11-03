@@ -19,13 +19,11 @@ pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) 
             }
         };
 
-    // Check expiration
-    if session.is_expired() {
-        println!("Session has expired. Please log in again.");
-        return;
-    }
-
-
+        // Check expiration
+        if session.is_expired() {
+            println!("Session has expired. Please log in again.");
+            return;
+        }
 
         println!("\n=== Admin Menu ===");
         println!("1. Create Clinician Account");
@@ -36,26 +34,34 @@ pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) 
 
         match choice {
             1 => {
+
                 // Get username and password input from user
                 match get_new_account_credentials() {
                     Ok((username, password)) => {
                         // Create the user in the database
                         match queries::create_user(&conn, &username, &password, "clinician",None) {
                             Ok(_) => println!("\nClinician account successfully created."),
-                            Err(e) => println!("\nError creating account."),
+                            Err(e) => println!("\nError creating account: {}", e),
                         }
                     }
                     Err(e) => eprintln!("Failed to read input: {}", e),
                 }
-            },
-            2 =>{
-                // display list of clinician usernames
-                let clinicians = queries::get_all_clinicians(&conn);
-                println!("Clinician accounts:");
-                for username in clinicians {
-                    println!("- {:?}", username);
+            }
+
+            2 => {
+                // Display list of clinicians
+                match queries::get_all_clinicians(conn) {
+                    Ok(clinicians) => {
+                        println!("\nClinician accounts:");
+                        for name in clinicians {
+                            println!("- {}", name);
+                        }
+                    }
+                    Err(e) => println!("Failed to fetch clinicians: {}", e),
                 }
-            } , 
+
+            }, 
+
             3 => {
                 println!("Logging out...");
                 // Synchronous session removal

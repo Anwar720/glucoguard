@@ -65,7 +65,7 @@ pub struct MealLog{
 #[derive(Debug)]
 pub struct Session{
     session_id: i32,
-    user_id: i32,
+    username: String,
     creation_time: String,
     expiration_time: Option<String>
 }

@@ -100,6 +100,7 @@ fn create_session_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
         CREATE TABLE IF NOT EXISTS sessions (
             session_id TEXT PRIMARY KEY UNIQUE,
             user_id TEXT NOT NULL,
+            role TEXT NOT NULL,
             creation_time BIGINT NOT NULL,
             expiration_time INT
         )";
