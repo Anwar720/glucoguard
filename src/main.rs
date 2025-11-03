@@ -1,14 +1,8 @@
 mod db;
-mod menus;
-mod auth;
-mod utils;
-mod access_control;
 use crate::db::db_utils;
 use crate::db::initialize;
-// use crate::access_control;
-use crate::menus::{login_menu,admin_menu,patient_menu,caretaker_menu,clinician_menu};
-
-
+use std::io::{self, Write};
+mod menus;
 
 fn main() {
 
@@ -24,23 +18,72 @@ let logo = r#"
 println!("{}", logo);
 
     // Initialize the database connection
-    let db_connection = initialize::establish_connection().unwrap();
-   // db_utils::print_table_info(&db_connection.unwrap()).unwrap();
+    let conn = initialize::establish_connection().expect("Failed to initialize DB");
+    //db_utils::print_table_info(&db_connection.unwrap()).unwrap();
 
-    //validate login and get user id and role
-    let user_option = login_menu::show_login_menu(&db_connection);
-    // create a user permission instance
-    let role = access_control::Role::new(&user_option.role);
 
-    match role.name.as_str() {
-    "admin" => admin_menu::show_admin_menu(&db_connection, &role),
-    "clinician" => clinician_menu::show_clinician_menu(&db_connection),
-    "patient" => patient_menu::show_patient_menu(&db_connection),
-    "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection),
-    _ => {
-      // log error
-      }
+    // Main loop for menu
+    loop {
+        print!("\nEnter 1 to Login ");
+        print!("\nEnter 2 to Create an account ");
+        print!("\nEnter 3 to Patient Menu ");
+        print!("\nEnter 4 to Caretaker Menu ");
+        print!("\nEnter 5 to Clinician Menu ");
+        print!("\nEnter your choice:  ");
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+
+        let command = input.trim();
+
+        match command {
+            "1" => {
+                println!("\n ---------------Login---------------");
+                print!("Enter username: ");
+                io::stdout().flush().unwrap();      
+                let mut username = String::new();
+                io::stdin().read_line(&mut username).unwrap();  
+                print!("Enter password: ");
+                io::stdout().flush().unwrap();
+                let mut password = String::new();
+                io::stdin().read_line(&mut password).unwrap();
+            }
+            "2"=> {
+                println!("---------------Create Account---------------");
+                print!("\nEnter 1 for Clinicians/Doctors");
+                print!("\nEnter 2 for Patients");
+                print!("\nEnter 3 for Caretakers");
+                print!("\nEnter your role: ");
+                io::stdout().flush().unwrap();
+                let mut role_input = String::new();
+                io::stdin().read_line(&mut role_input).unwrap();
+                let role = role_input.trim();   
+                // creating account based on role 
+                match role {
+                    "1" => println!("\nCreating account for Clinician/Doctor"),
+                    // "2" => println!("\nPlease contact your Clinician to create a Patient account"),
+                    "2" => {menus::patient_menu::run_patient_menu(&conn);}
+                    "3" => println!("\nCreating account for Caretaker"),
+                    _ => println!("\nInvalid role choice!")
+                }
+            }
+            "3" => {
+                println!("\n---------------Patient Menu---------------");
+                // TODO: add view/edit/delete patient actions here
+                menus::patient_menu::run_patient_menu(&conn);
+            }
+            "4" => {
+                println!("\n---------------Caretaker Menu---------------");
+                // TODO: add view/edit/delete caretaker actions here
+                menus::caretaker_menu::run_caretaker_menu(&conn);
+            }
+            "5" => {
+                println!("\n---------------Clinician Menu---------------");
+                // TODO: add view/edit/delete clinician actions here
+                menus::clinician_menu::run_clinician_menu(&conn);
+            }
+            _ => println!("Invalid choice!")
+        }
     }
-
-
 }

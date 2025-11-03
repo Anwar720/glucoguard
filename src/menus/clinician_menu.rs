@@ -1,20 +1,19 @@
+use std::io::{self, Write};
+use crate::db::initialize;
+use rusqlite::OptionalExtension;
 
-use crate::utils;
-
-pub fn show_clinician_menu(conn: &rusqlite::Connection) {
+pub fn run_clinician_menu(conn: &rusqlite::Connection) {
     loop {
-        println!("=== Clinician Menu ===");
-        println!("1. View Patients");
-        println!("2. Create Patient Account");
-        println!("3. Logout");
+        println!("\n--- Clinician Menu ---");
+        println!("0) Back");
+        print!("Choose an option: ");
+        io::stdout().flush().unwrap();
 
-        let choice = utils::get_user_choice();
-
-        match choice {
-            1 => println!("Viewing patients..."), // Placeholder for actual functionality
-            2 => println!("Creating patient account..."), // Placeholder for actual functionality
-            3 => break,
-            _ => println!("Invalid choice"),
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        match input.trim() {
+            "0" => break,
+            _ => println!("Invalid choice."),
         }
     }
 }

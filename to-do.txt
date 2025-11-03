@@ -1,0 +1,25 @@
+python3 gcm_reader.py
+python3 insulin_pump.py
+
+
+track role of authenticated user and allow access to create patient
+enforce patient - clinician id, caretaker id
+
+
+INSERT INTO glucose_readings (patient_id, glucose_level, reading_time, status) values (2,111,datetime('now'),'complete');
+
+
+sqlite3 /home/dev/CCNY/glucoguard/data/database.db <<'SQL'
+.mode csv
+DROP TABLE IF EXISTS temp_readings;
+CREATE TABLE temp_readings (
+  patient_id INTEGER,
+  glucose_level REAL,
+  status TEXT
+);
+.import --skip 1 /home/dev/CCNY/glucoguard/sample_readings.csv temp_readings
+INSERT INTO glucose_readings (patient_id, glucose_level, status, reading_time)
+SELECT patient_id, glucose_level, status, datetime('now') FROM temp_readings;
+DROP TABLE temp_readings;
+SQL
+
