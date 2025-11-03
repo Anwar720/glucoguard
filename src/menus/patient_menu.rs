@@ -29,7 +29,7 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
             return;
         }
 
-        // Check role is Admin
+        // Check role is patient
         if session.role != "patient"{
             println!("Invalid access rights to view page");
             return;
@@ -44,7 +44,7 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
 
         match choice {
             1 => {
-                create_and_display_caretaker_activation_code(conn,role);
+                create_and_display_caretaker_activation_code(conn,role, &session_id);
             },
             2 => println!("example functionality..."), // Placeholder for actual functionality
             3 => {
@@ -62,7 +62,8 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
 }
 pub fn create_and_display_caretaker_activation_code(
     conn: &rusqlite::Connection,
-    role: &Role 
+    role: &Role,
+    session_id: &str
 ) {
     // Generate a one-time activation code
     let activation_code = generate_one_time_code(15);
@@ -74,7 +75,7 @@ pub fn create_and_display_caretaker_activation_code(
     match insert_activation_code(conn, &activation_code, new_account_type, user_id.as_str(), role.id.as_str()) {
         Ok(()) => {
             // Add caretaker to team
-            if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str()) {
+            if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str(), &session_id) {
                 eprintln!(" Failed to add caretaker team member: {}", e);
             }
 

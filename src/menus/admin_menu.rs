@@ -56,7 +56,7 @@ pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) 
 
             2 => {
                 // Display list of clinicians
-                match queries::get_all_clinicians(conn) {
+                match queries::get_all_clinicians(conn, &session_id) {
                     Ok(clinicians) => {
                         println!("\nClinician accounts:");
                         for name in clinicians {
