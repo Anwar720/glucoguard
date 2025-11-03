@@ -36,24 +36,11 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
             return;
         }
 
-         // Fetch session from the database
-        let session = match session_manager.get_session_by_id(conn, session_id) {
-            Some(s) => s,
-            None => {
-                println!("Invalid or expired session. Please log in again.");
-                return;
-            }
-        };
-
-        // Check if session is expired
-        if session.is_expired() {
-            println!("Session has expired. Logging you out...");
-            if let Err(e) = session_manager.remove_session(conn, session_id) {
-                println!("Failed to remove session: {}", e);
-            }
+        // Check role is Admin
+        if session.role != "clinician"{
+            println!("Invalid access rights to view page");
             return;
         }
-
 
         println!("=== Clinician Menu ===");
         println!("1. View Patients");
@@ -64,10 +51,10 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
 
         match choice {
             1 => {
-                show_patients_menu(conn,&role.id);
+                show_patients_menu(conn,&role.id, &session_id);
             }, // Placeholder for actual functionality
             2 =>{ // get patient data and create patient account 
-                handle_patient_account_creation(&conn,role, &session_id);
+                handle_patient_account_creation(&conn, role, &session_id);
             },
             3 => {
                 println!("Logging out...");
@@ -83,7 +70,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
     }
 }
 
-fn handle_patient_account_creation(conn:&rusqlite::Connection,role:&Role, session_id: &str){
+fn handle_patient_account_creation(conn:&rusqlite::Connection, role:&Role, session_id: &str){
     let patient = menu_utils::get_new_patient_input(role.id.clone());
 
     //insert patient data in db and check if successfully inserted
@@ -112,8 +99,8 @@ fn handle_patient_account_creation(conn:&rusqlite::Connection,role:&Role, sessio
     }
 }
 
-fn show_patients_menu(conn: &Connection, clinician_id: &String) {
-    match get_patients_by_clinician_id(conn, clinician_id) {
+fn show_patients_menu(conn: &Connection, clinician_id: &String, session_id: &str) {
+    match get_patients_by_clinician_id(conn, clinician_id, &session_id) {
         Ok(patients) => {
             if patients.is_empty() {
                 println!("No patients found.");

@@ -220,7 +220,34 @@ pub struct PatientSummary {
     pub last_name: String,
 }
 
-pub fn get_patients_by_clinician_id(conn: &Connection, clinician_id: &String) -> Result<Vec<PatientSummary>, Box<dyn Error>> {
+pub fn get_patients_by_clinician_id(
+    conn: &Connection, 
+    clinician_id: &String,
+    session_id: &str) 
+    -> Result<Vec<PatientSummary>, Box<dyn Error>> {
+
+    let required_permission = Permission::ViewPatient;
+    let session_manager = SessionManager::new();
+
+    //search for session
+    let opt_session: Option<Session> = session_manager.get_session_by_id(conn, session_id);
+    let session: Session = opt_session
+        .ok_or(rusqlite::Error::InvalidQuery)?;
+
+    //check session expiration
+    if session.is_expired() {
+        eprintln!("Session has expired!");
+        return Err(Box::new(rusqlite::Error::InvalidQuery));
+    }
+
+    //check session permissions
+    // Convert session.role (String) into Role
+    let role: Role = Role::new(&session.role,&session.user_id);
+
+    if !session_manager.check_permissions(conn, session_id, &role, required_permission) {
+        eprintln!("Access denied: insufficient permissions.");
+        return Err(Box::new(rusqlite::Error::InvalidQuery));
+    }
     let mut stmt = conn.prepare(
         "SELECT patient_id, first_name, last_name 
         FROM patients 

@@ -45,12 +45,13 @@ println!("{}", logo);
                     let role = access_control::Role::new(&login_result.role, &login_result.user_id);
                     //create session manager
                     let session_manager = SessionManager::new();
+                    session_manager.run_cleanup("./data/database.db");
 
                     match role.name.as_str() {
-                        "admin" => admin_menu::show_admin_menu(&db_connection, &role,&login_result.session_id),
-                        "clinician" => clinician_menu::show_clinician_menu(&db_connection, &role,&login_result.session_id),
-                        "patient" => patient_menu::show_patient_menu(&db_connection, &role,&login_result.session_id),
-                        "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &role,&login_result.session_id),
+                        "admin" => admin_menu::show_admin_menu(&db_connection, &role, &login_result.session_id),
+                        "clinician" => clinician_menu::show_clinician_menu(&db_connection, &role, &login_result.session_id),
+                        "patient" => patient_menu::show_patient_menu(&db_connection, &role, &login_result.session_id),
+                        "caretaker" => caretaker_menu::show_caretaker_menu(&db_connection, &role, &login_result.session_id),
                         _ => eprintln!(" Unknown role: {}", role.name),
                     }
                 }

@@ -26,6 +26,12 @@ pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &s
             return;
         }
         
+        // Check role is Admin
+        if session.role != "caretaker"{
+            println!("Invalid access rights to view page");
+            return;
+        }
+
         println!("=== CareTaker Menu ===");
 
         println!("1) View Patient Summary");

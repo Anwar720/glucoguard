@@ -6,11 +6,11 @@ use crate::session::SessionManager;
 use rusqlite::Connection;
 
 pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) {
-    
+    let session_manager = SessionManager::new();
+
     loop {
 
-        let session_manager = SessionManager::new();
-    // Fetch session from the database
+        // Fetch session from the database
         let session = match session_manager.get_session_by_id(conn, session_id) {
             Some(s) => s,
             None => {
@@ -22,6 +22,12 @@ pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) 
         // Check expiration
         if session.is_expired() {
             println!("Session has expired. Please log in again.");
+            return;
+        }
+
+        // Check user role is Admin
+        if session.role != "admin"{
+            println!("Invalid access rights to view page");
             return;
         }
 

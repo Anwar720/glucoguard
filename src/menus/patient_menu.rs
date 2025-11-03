@@ -29,6 +29,12 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
             return;
         }
 
+        // Check role is Admin
+        if session.role != "patient"{
+            println!("Invalid access rights to view page");
+            return;
+        }
+
         println!("=== Patient Menu ===");
         println!("1. Create Caretaker activation code.");
         println!("2. example Action");
