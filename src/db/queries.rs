@@ -410,3 +410,25 @@ pub fn remove_expired_sessions(conn: &Connection) -> Result<()> {
     )?;
     Ok(())
 }
+
+/// Adds or updates the clinician_id for a given patient.
+pub fn add_caretaker_to_patient_account(conn: &Connection, patient_id: &str, caretaker_id: &str) -> Result<()> {
+    // // Check if the patient exists
+    // let mut stmt = conn.prepare("SELECT COUNT(*) FROM patients WHERE id = ?1")?;
+    // let patient_count: i64 = stmt.query_row(params![patient_id], |row| row.get(0))?;
+
+    // if patient_count == 0 {
+    //     println!(" Patient not found.");
+    //     return Ok(()); 
+    // }
+    // Update clinician_id
+    conn.execute(
+        "UPDATE patients SET caretaker_id = ?1 WHERE patient_id = ?2",
+        params![caretaker_id, patient_id],
+    )?;
+    println!("Caretaker successfully assigned to patient.");
+
+    Ok(())
+}
+
+

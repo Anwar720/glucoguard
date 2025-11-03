@@ -28,22 +28,42 @@ pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &s
         
         println!("=== CareTaker Menu ===");
 
-        println!("1) View Patient Summary");
-        println!("2) Request Insulin for Patient");
-        println!("3. Logout");
+        println!("1) View most recent glucose readings.");
+        println!("2) View current basal and bolus options.");
+        println!("3) Request bolus insulin dose.");
+        println!("4) Configure basal insulin dose time.");
+        println!("5) View patient insulin history.");
+        println!("6. Logout");
         print!("Enter your choice: ");
         let choice = utils::get_user_choice();
 
         match choice {
 
             1 => {
+                //View the patient’s most recent glucose readings.
                 //view_patient_summary_flow(conn)
             },
             2 => {
-                //request_insulin_flow(conn)
+                // View the patient’s current basal rate and bolus insulin options.
             }, 
-
             3 => {
+                //Request a bolus insulin dose.
+                // – Caretakers cannot request more than the prescribed maximum dose or violate safety limits.
+                // – Caretakers cannot request more than one dose per every four hours (corresponding to
+                // three meals a day).
+
+            }, 
+            4 => {
+                //Configure basal insulin dose time.
+                // – Caretakers can adjust the basal insulin dose, which will be effective within 24 hours, so as
+                // not to overlap a previous dose.
+                // – Caretakers cannot request more than the prescribed maximum dose or violate safety limits.
+
+            }, 
+            5 => {
+                //Review historical insulin delivery and glucose data.
+            }, 
+            6 => {
                 println!("Logging out...");
                 if let Err(e) = session_manager.remove_session(conn, &session_id) {
                     println!("Failed to remove session: {}", e);
