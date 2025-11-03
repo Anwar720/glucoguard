@@ -1,6 +1,8 @@
 use crate::utils;
 use crate::access_control::Role;
-use crate::db::queries::{insert_activation_code,add_caretaker_team_member};
+use crate::db::queries::{insert_activation_code,
+                        add_caretaker_team_member,
+                        add_caretaker_to_patient_account};
 use crate::auth::{generate_one_time_code};
 use uuid::Uuid;
 use crate::session::SessionManager;
@@ -36,20 +38,49 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
         }
 
         println!("=== Patient Menu ===");
-        println!("1. Create Caretaker activation code.");
-        println!("2. example Action");
-        println!("3. Logout");
+        println!("1) View most recent glucose readings.");
+        println!("2) View current basal and bolus options.");
+        println!("3) Request bolus insulin dose.");
+        println!("4) Configure basal insulin dose time.");
+        println!("5) View patient insulin history.");
+        println!("6. Create Caretaker activation code.");
+        println!("7. Logout");
         print!("Enter your choice: ");
         let choice = utils::get_user_choice();
+    
 
-        match choice {
+
+    match choice {
+
             1 => {
-                create_and_display_caretaker_activation_code(conn,role);
+                //View the patient’s most recent glucose readings.
+                //view_patient_summary_flow(conn)
             },
-            2 => println!("example functionality..."), // Placeholder for actual functionality
+            2 => {
+                // View the patient’s current basal rate and bolus insulin options.
+            }, 
             3 => {
+                //  Request a bolus insulin dose.
+                //– Patients cannot request more than the prescribed maximum dose or violate safety limits
+
+            }, 
+            4 => {
+                //Configure basal insulin dose time.
+                // Patients can adjust the basal insulin dose, which will be effective within 24 hours, so as
+                // not to overlap a previous dose.
+                // – Patients cannot request more than the prescribed maximum dose or violate safety limits.
+
+            }, 
+            5 => {
+                //Review historical insulin delivery and glucose data.
+            }, 
+            6 => {
+                //
+                create_and_display_caretaker_activation_code(conn,role);
+            }, 
+            7 => {
                 println!("Logging out...");
-                if let Err(e) = session_manager.remove_session(conn, session_id) {
+                if let Err(e) = session_manager.remove_session(conn, &session_id) {
                     println!("Failed to remove session: {}", e);
                 } else {
                     println!("Session removed. Goodbye!");
@@ -59,6 +90,7 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
             _ => println!("Invalid choice"),
         }
     }
+    
 }
 pub fn create_and_display_caretaker_activation_code(
     conn: &rusqlite::Connection,
@@ -74,10 +106,12 @@ pub fn create_and_display_caretaker_activation_code(
     match insert_activation_code(conn, &activation_code, new_account_type, user_id.as_str(), role.id.as_str()) {
         Ok(()) => {
             // Add caretaker to team
-            if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str()) {
-                eprintln!(" Failed to add caretaker team member: {}", e);
-            }
+            // if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str()) {
+            //     eprintln!(" Failed to add caretaker team member: {}", e);
+            // }
 
+            // add caretaker user_id to patient table
+            add_caretaker_to_patient_account(conn,role.id.as_str(),user_id.as_str());
             // Display activation code for clinician to share
             println!(
                 "\n Caretaker activation code generated successfully!\n\
@@ -91,3 +125,4 @@ pub fn create_and_display_caretaker_activation_code(
         }
     }
 }
+
