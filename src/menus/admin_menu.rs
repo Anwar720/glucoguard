@@ -14,11 +14,11 @@ pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role) {
 
         match choice {
             1 => {
-                // Get username and password from user
+                // Get username and password input from user
                 match get_new_account_credentials() {
                     Ok((username, password)) => {
                         // Create the user in the database
-                        match queries::create_user(&conn, &username, &password, "clinician") {
+                        match queries::create_user(&conn, &username, &password, "clinician",None) {
                             Ok(_) => println!("\nClinician account successfully created."),
                             Err(e) => println!("\nError creating account."),
                         }

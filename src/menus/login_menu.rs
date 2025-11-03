@@ -4,6 +4,31 @@ use crate::db::queries;
 use crate::auth;
 use rpassword::read_password;
 
+
+pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
+    println!("\n --------------- Login ---------------");
+    loop{
+        print!("Enter username: ");
+        io::stdout().flush().unwrap();      
+        let mut username = String::new();
+        io::stdin().read_line(&mut username);
+        username = username.trim().to_string();
+        print!("Enter password: ");
+        io::stdout().flush().unwrap();
+        let password = read_password().expect("Failed to read password");
+        let password = password.trim().to_string();
+
+        // call login function to validate username and password
+        let login_result = user_login(&conn,&username,&password);
+        if login_result.success {
+            return login_result;
+        }
+        // generic error message for failed login 
+        println!("Username or Password is incorrect.");
+    }
+}
+
+
 pub struct LoginResult {
     pub success: bool,
     pub user_id: String,
@@ -53,28 +78,4 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginR
             role: String::new(),
         }
     
-}
-
-
-pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
-    println!("\n --------------- Login ---------------");
-    loop{
-        print!("Enter username: ");
-        io::stdout().flush().unwrap();      
-        let mut username = String::new();
-        io::stdin().read_line(&mut username);
-        username = username.trim().to_string();
-        print!("Enter password: ");
-        io::stdout().flush().unwrap();
-        let password = read_password().expect("Failed to read password");
-        let password = password.trim().to_string();
-
-        // call login function to validate username and password
-        let login_result = user_login(&conn,&username,&password);
-        if login_result.success {
-            return login_result;
-        }
-        // generic error message for failed login 
-        println!("Username or Password is incorrect.");
-    }
 }

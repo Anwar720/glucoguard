@@ -18,17 +18,19 @@ pub enum Permission {
 // struct to represent roles and their associated permissions
 pub struct Role{
     pub name: String,
+    pub id: String,
     pub permissions: HashSet<Permission>,
 }
 
 // impl methods for Role struct and permission checking
 impl Role{
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, id:&str) -> Self {
         // get default permissions using role
         let permissions = Self::default_permissions(name);
         // create new role with given name and permissions
         Self {
             name: name.to_string(),
+            id:id.to_string(),
             permissions,
         }
     }

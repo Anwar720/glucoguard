@@ -20,7 +20,7 @@ fn create_patients_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     // SQL to create patients table
     let sql = "
         CREATE TABLE IF NOT EXISTS patients (
-            patient_id INTEGER PRIMARY KEY UNIQUE,
+            patient_id TEXT PRIMARY KEY UNIQUE,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             date_of_birth TEXT NOT NULL,
@@ -29,8 +29,8 @@ fn create_patients_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
             max_dosage REAL NOT NULL,
             low_glucose_threshold REAL NOT NULL,
             high_glucose_threshold REAL NOT NULL,
-            clinician_id INTEGER NOT NULL,
-            caretaker_id INTEGER NOT NULL
+            clinician_id TEXT NOT NULL,
+            caretaker_id TEXT NOT NULL
         )";
     conn.execute(sql, [])?;
     Ok(())
@@ -39,7 +39,7 @@ fn create_patient_care_team_table(conn:&rusqlite::Connection)->rusqlite::Result<
     // SQL to create patient_care_team table
     let sql = "
         CREATE TABLE IF NOT EXISTS patient_care_team (
-            care_taker_id INTEGER NOT NULL,
+            care_taker_id TEXT NOT NULL,
             patient_id_list TEXT NOT NULL
         )";
     conn.execute(sql, [])?;
@@ -95,13 +95,25 @@ fn create_meal_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     conn.execute(sql, [])?;
     Ok(())
 }
-pub fn create_session_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
+fn create_session_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     let sql = "
         CREATE TABLE IF NOT EXISTS sessions (
             session_id INTEGER PRIMARY KEY UNIQUE,
             user_id INTEGER NOT NULL,
             creation_time TEXT NOT NULL,
             expiration_time TEXT
+        )";
+    conn.execute(sql, [])?;
+    Ok(())
+}
+fn create_activation_codes_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
+    let sql = "
+        CREATE TABLE IF NOT EXISTS activation_codes (
+            code TEXT UNIQUE NOT NULL,
+            user_type TEXT NOT NULL,   
+            user_id TEXT,   
+            issuer_id TEXT NOT NULL,            
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )";
     conn.execute(sql, [])?;
     Ok(())
@@ -117,6 +129,7 @@ pub fn initialize_database(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     create_alerts_table(conn)?;
     create_meal_logs_table(conn)?;
     create_session_table(conn)?;
+    create_activation_codes_table(conn)?;
     println!("Successfully connected to database...");
     Ok(())
 }

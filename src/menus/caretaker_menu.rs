@@ -1,6 +1,7 @@
 use crate::utils;
+use crate::access_control::Role; 
 
-pub fn show_caretaker_menu(conn: &rusqlite::Connection) {
+pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role) {
     loop {
         println!("=== CareTaker Menu ===");
         println!("1. View Patients");

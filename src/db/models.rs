@@ -9,6 +9,7 @@ pub struct User{
     pub created_at: String,
     pub last_login: Option<String>
 }
+#[derive(Debug)]
 pub struct Patient{
     pub patient_id: String,
     pub first_name: String,
@@ -22,10 +23,12 @@ pub struct Patient{
     pub clinician_id: String,
     pub caretaker_id: String
 }
+#[derive(Debug)]
 pub struct PatientCareTeam{
     care_taker_id: i32,
     patient_id_list: Vec<i32>
 }
+#[derive(Debug)]
 pub struct GlucoseReading{
     reading_id: i32,
     patient_id: i32,
@@ -33,6 +36,7 @@ pub struct GlucoseReading{
     reading_time: String,
     status: String
 }
+#[derive(Debug)]
 pub struct InsulinLog{
     dosage_id: i32,
     patient_id: i32,
@@ -41,6 +45,7 @@ pub struct InsulinLog{
     requested_by: String,
     dosage_time: String
 }
+#[derive(Debug)]
 pub struct Alerts{
     alert_id: i32,
     patient_id: i32,
@@ -50,12 +55,14 @@ pub struct Alerts{
     is_resolved: bool,
     resolved_by: Option<String>,
 }
+#[derive(Debug)]
 pub struct MealLog{
     meal_id: i32,
     patient_id: i32,
     carbohydrate_amount: f32,
     meal_time: String
 }
+#[derive(Debug)]
 pub struct Session{
     session_id: i32,
     user_id: i32,
