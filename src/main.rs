@@ -1,5 +1,4 @@
 mod db;
-mod session;
 mod menus;
 mod auth;
 mod utils;
@@ -7,7 +6,6 @@ mod access_control;
 mod input_validation;
 use crate::db::db_utils;
 use crate::db::initialize;
-// use crate::access_control;
 use crate::menus::{login_menu,admin_menu,patient_menu,
                   caretaker_menu,clinician_menu,home_menu,signup_menu};
 mod session;

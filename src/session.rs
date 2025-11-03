@@ -2,12 +2,13 @@ use std::time::{SystemTime, Duration};
 use crate::db::queries;
 use rusqlite::Connection;
 use rand::RngCore;
+use crate::access_control::{Role, Permission};
 
 /*
 Securely track logged-in users.
 Associate each session with a unique token.
 Support session expiration (time-based).
-Store active sessions in memory (or optionally persist to disk)
+Store active sessions in memory
 */
 
 //struct for sessoin
@@ -15,6 +16,7 @@ Store active sessions in memory (or optionally persist to disk)
 pub struct Session {
     pub session_id: String,
     pub user_id: String,
+    pub role : String,
     pub create_time: SystemTime,
     pub exp_time: Duration,
 }
@@ -35,7 +37,7 @@ impl SessionManager {
     }
 
     // Create a new session and persist it in the DB
-    pub fn create_session(&self, conn: &Connection, user_id: String) -> rusqlite::Result<String> {
+    pub fn create_session(&self, conn: &Connection, user_id: String, role: String) -> rusqlite::Result<String> {
         // Generate a random session token
         let mut bytes = [0u8; 32];
         rand::thread_rng().fill_bytes(&mut bytes);
@@ -45,6 +47,7 @@ impl SessionManager {
         let session = Session {
             session_id: session_id.clone(),
             user_id,
+            role,
             create_time: SystemTime::now(),
             exp_time: Duration::from_secs(60 * 60), // 1 hour
         };
@@ -63,9 +66,6 @@ impl SessionManager {
     }
 
     // Retrieve a session by ID
-    //if the session exists it is returned
-    //if the session doesn't exist or expired
-    //None is returned
     pub fn get_session_by_id(&self, conn: &Connection, session_id: &str) -> Option<Session> {
         match queries::get_session_by_id(conn, session_id) {
             Ok(Some(session)) if !session.is_expired() => Some(session),
@@ -79,7 +79,6 @@ impl SessionManager {
     }
 
     // Periodic cleanup task (removes expired sessions)
-
     pub fn cleanup_expired_sessions(&self, conn: &Connection) -> rusqlite::Result<()> {
         queries::remove_expired_sessions(conn)
     }
@@ -87,9 +86,11 @@ impl SessionManager {
     // Run cleanup in a background thread every 60 seconds
     pub fn run_cleanup(&self, db_path: &str) {
         let db_path = db_path.to_string();
+        //create a new thread to rmove expired sessions
         std::thread::spawn(move || loop {
             match Connection::open(&db_path) {
                 Ok(conn) => {
+                    //remove expired sessions by calling remove_expired_sessions
                     if let Err(e) = queries::remove_expired_sessions(&conn) {
                         eprintln!("Failed to cleanup expired sessions: {:?}", e);
                     }
@@ -98,5 +99,31 @@ impl SessionManager {
             }
             std::thread::sleep(Duration::from_secs(60));
         });
+    }
+
+    /* Access managed 
+    through session manager
+    Check user permissions
+    */
+    //check if the user has the rights to complete action
+    pub fn check_permissions
+    (&self, conn: &Connection, 
+    session_id: &str, 
+    permission: &Permission) -> bool{
+        if let Some(session) = self.get_session_by_id(conn, session_id) {
+            //ensure session hasn't expired before validating access
+            if session.is_expired() {
+                println!("Session Expired");
+                return false;
+            }
+
+            let role = Role::new(&session.role, &session.user_id);
+
+            //verify role permissions return true if permission exits with role
+            role.has_permission(permission)
+        } else{
+            println!("Invalid or missing session");
+            false
+        }
     }
 }

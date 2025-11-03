@@ -283,9 +283,10 @@ pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusq
         INSERT INTO sessions (
             session_id,
             user_id,
+            role,
             creation_time,
             expiration_time
-        ) VALUES (?1, ?2, ?3, ?4)
+        ) VALUES (?1, ?2, ?3, ?4, ?5)
     ";
 
     conn.execute(
@@ -293,6 +294,7 @@ pub fn add_session_to_db(conn: &rusqlite::Connection, session: &Session) -> rusq
         params![
             session.session_id,
             session.user_id,
+            session.role,
             creation_time,
             expiration_time
         ]
@@ -311,7 +313,7 @@ pub fn remove_session(conn: &rusqlite::Connection, session_id: &str) -> rusqlite
 //get a session
 pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> {
     let mut stmt = conn.prepare(
-        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE user_id = ?1"
+        "SELECT session_id, user_id, role, creation_time, expiration_time FROM sessions WHERE user_id = ?1"
     )?;
 
     let mut rows = stmt.query([user_id])?;
@@ -319,10 +321,12 @@ pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> 
     if let Some(row) = rows.next()? {
         let session_id: String = row.get(0)?;
         let username: String = row.get(1)?;
-        let create_time_secs: u64 = row.get(2)?;
-        let exp_time_secs: u64 = row.get(3)?;
+        let role: String = row.get(2)?;
+        let create_time_secs: u64 = row.get(3)?;
+        let exp_time_secs: u64 = row.get(4)?;
         let session = Session {
             session_id,
+            role,
             user_id:user_id.to_string(),
             create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
             exp_time: Duration::from_secs(exp_time_secs),
@@ -336,7 +340,7 @@ pub fn get_session(conn: &Connection, user_id: &str) -> Result<Option<Session>> 
 // fetch by session_id
 pub fn get_session_by_id(conn: &Connection, session_id: &str) -> Result<Option<Session>> {
     let mut stmt = conn.prepare(
-        "SELECT session_id, user_id, creation_time, expiration_time FROM sessions WHERE session_id = ?1"
+        "SELECT session_id, user_id, role, creation_time, expiration_time FROM sessions WHERE session_id = ?1"
     )?;
 
     let mut rows = stmt.query([session_id])?;
@@ -344,12 +348,14 @@ pub fn get_session_by_id(conn: &Connection, session_id: &str) -> Result<Option<S
     if let Some(row) = rows.next()? {
         let session_id: String = row.get(0)?;
         let user_id: String = row.get(1)?;
-        let create_time_secs: u64 = row.get(2)?;
-        let exp_time_secs: u64 = row.get(3)?;
+        let role: String = row.get(2)?;
+        let create_time_secs: u64 = row.get(3)?;
+        let exp_time_secs: u64 = row.get(4)?;
 
         Ok(Some(Session {
             session_id,
             user_id,
+            role,
             create_time: UNIX_EPOCH + Duration::from_secs(create_time_secs),
             exp_time: Duration::from_secs(exp_time_secs),
         }))

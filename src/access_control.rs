@@ -15,6 +15,23 @@ pub enum Permission {
     ViewAlerts,
 }
 
+impl Permission{
+    pub fn perm_description(&self) -> &str {
+        //check its value and prints out description of permi
+        match self{
+            Permission::ViewPatient => "View Patient Information",
+            Permission::CreateClinicianAccount => "Create a clinician account",
+            Permission::RemoveClinicianAccount => "Remove a clinician account",
+            Permission::CreatePatientAccount => "Create a patient account",
+            Permission::CreateCaretakerLink => "Create a caretaker link",
+            Permission::EditPatientData => "Edit patient information",
+            Permission::ViewGlucose => "View glucose readings",
+            Permission::AddGlucose => "Request glucose injection",
+            Permission::ViewAlerts => "View alerts",
+        }
+    }
+}
+
 // struct to represent roles and their associated permissions
 pub struct Role{
     pub name: String,
