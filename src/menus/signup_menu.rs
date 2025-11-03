@@ -45,12 +45,12 @@ pub fn show_signup_menu(conn: &Connection) -> Option<()> {
         let confirm = read_input("Re-enter password to confirm: ");
 
         if input != confirm {
-            eprintln!("❌ Passwords do not match. Try again.");
+            eprintln!(" Passwords do not match. Try again.");
             continue;
         }
 
         if let Err(err) = validate_password_strength(&input) {
-            eprintln!("❌ {}", err);
+            eprintln!(" {}", err);
             continue;
         }
 
@@ -65,7 +65,7 @@ pub fn show_signup_menu(conn: &Connection) -> Option<()> {
         &code_info.user_type,
         Some(code_info.user_id.clone()), // use user_id from activation code
     ) {
-        eprintln!("❌ Failed to create user: {}", err);
+        eprintln!(" Failed to create user: {}", err);
         return None;
     }
 

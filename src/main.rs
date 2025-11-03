@@ -32,7 +32,7 @@ println!("{}", logo);
 
     loop {
       // ask user if they want to login or signup 
-      let user_choice = home_menu::show_home_menu();
+    let user_choice = home_menu::show_home_menu();
 
         match user_choice {
             1 => {
