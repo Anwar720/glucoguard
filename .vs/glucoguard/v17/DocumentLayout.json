@@ -1,0 +1,105 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\honor\\projects\\glucoguard\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\honor\\projects\\glucoguard\\src\\db\\queries.rs||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\db\\queries.rs||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\honor\\projects\\glucoguard\\src\\session.rs||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\session.rs||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\honor\\projects\\glucoguard\\src\\menus\\admin_menu.rs||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\menus\\admin_menu.rs||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\honor\\projects\\glucoguard\\src\\access_control.rs||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\access_control.rs||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\honor\\projects\\glucoguard\\src\\menus\\login_menu.rs||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\menus\\login_menu.rs||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "queries.rs",
+              "DocumentMoniker": "C:\\Users\\honor\\projects\\glucoguard\\src\\db\\queries.rs",
+              "RelativeDocumentMoniker": "src\\db\\queries.rs",
+              "ToolTip": "C:\\Users\\honor\\projects\\glucoguard\\src\\db\\queries.rs*",
+              "RelativeToolTip": "src\\db\\queries.rs*",
+              "ViewState": "AgIAAHAAAAAAAAAAAAAmwH8AAAAEAAAAAAAAAA==",
+              "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
+              "WhenOpened": "2025-11-03T14:10:00.657Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "access_control.rs",
+              "DocumentMoniker": "C:\\Users\\honor\\projects\\glucoguard\\src\\access_control.rs",
+              "RelativeDocumentMoniker": "src\\access_control.rs",
+              "ToolTip": "C:\\Users\\honor\\projects\\glucoguard\\src\\access_control.rs",
+              "RelativeToolTip": "src\\access_control.rs",
+              "ViewState": "AgIAADkAAAAAAAAAAAAAAEAAAABBAAAAAAAAAA==",
+              "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
+              "WhenOpened": "2025-11-03T13:31:41.973Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "login_menu.rs",
+              "DocumentMoniker": "C:\\Users\\honor\\projects\\glucoguard\\src\\menus\\login_menu.rs",
+              "RelativeDocumentMoniker": "src\\menus\\login_menu.rs",
+              "ToolTip": "C:\\Users\\honor\\projects\\glucoguard\\src\\menus\\login_menu.rs",
+              "RelativeToolTip": "src\\menus\\login_menu.rs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAACQAAABuAAAAAAAAAA==",
+              "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
+              "WhenOpened": "2025-11-03T13:05:22.726Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "session.rs",
+              "DocumentMoniker": "C:\\Users\\honor\\projects\\glucoguard\\src\\session.rs",
+              "RelativeDocumentMoniker": "src\\session.rs",
+              "ToolTip": "C:\\Users\\honor\\projects\\glucoguard\\src\\session.rs",
+              "RelativeToolTip": "src\\session.rs",
+              "ViewState": "AgIAAGgAAAAAAAAAAAAAAHcAAABCAAAAAAAAAA==",
+              "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
+              "WhenOpened": "2025-11-03T13:00:31.669Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "admin_menu.rs",
+              "DocumentMoniker": "C:\\Users\\honor\\projects\\glucoguard\\src\\menus\\admin_menu.rs",
+              "RelativeDocumentMoniker": "src\\menus\\admin_menu.rs",
+              "ToolTip": "C:\\Users\\honor\\projects\\glucoguard\\src\\menus\\admin_menu.rs*",
+              "RelativeToolTip": "src\\menus\\admin_menu.rs*",
+              "ViewState": "AgIAACEAAAAAAAAAAAAAACQAAAAAAAAAAAAAAA==",
+              "Icon": "c622248c-8545-475a-99b2-201af73752bd.000001|",
+              "WhenOpened": "2025-11-03T12:55:42.655Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

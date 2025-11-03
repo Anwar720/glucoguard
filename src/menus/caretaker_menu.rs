@@ -343,4 +343,3 @@ pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &s
 //         Err(_) => { eprintln!("Invalid number."); None }
 //     }
 // }
->>>>>>> 8acd4c61db70b3af55c478702aebe1afd4936b97

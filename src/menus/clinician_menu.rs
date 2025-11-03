@@ -67,7 +67,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
                 show_patients_menu(conn,&role.id);
             }, // Placeholder for actual functionality
             2 =>{ // get patient data and create patient account 
-                handle_patient_account_creation(&conn,role);
+                handle_patient_account_creation(&conn,role, &session_id);
             },
             3 => {
                 println!("Logging out...");
@@ -83,11 +83,11 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
     }
 }
 
-fn handle_patient_account_creation(conn:&rusqlite::Connection,role:&Role){
+fn handle_patient_account_creation(conn:&rusqlite::Connection,role:&Role, session_id: &str){
     let patient = menu_utils::get_new_patient_input(role.id.clone());
 
     //insert patient data in db and check if successfully inserted
-    match insert_patient_account_details_in_db(&conn,&patient){
+    match insert_patient_account_details_in_db(&conn, &patient, &session_id){
         Ok(())=>{
             let patient_activation_code = generate_one_time_code(15);
             let new_account_type = "patient";

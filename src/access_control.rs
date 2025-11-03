@@ -3,6 +3,7 @@ use std::collections::HashSet;
 
 // lists os all permissions 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+
 pub enum Permission {
     ViewPatient,
     CreateClinicianAccount,

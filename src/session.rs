@@ -106,24 +106,32 @@ impl SessionManager {
     Check user permissions
     */
     //check if the user has the rights to complete action
-    pub fn check_permissions
-    (&self, conn: &Connection, 
-    session_id: &str, 
-    permission: &Permission) -> bool{
-        if let Some(session) = self.get_session_by_id(conn, session_id) {
-            //ensure session hasn't expired before validating access
-            if session.is_expired() {
-                println!("Session Expired");
-                return false;
+    pub fn check_permissions(
+        &self,
+        conn: &Connection,
+        session_id: &str,
+        role: &Role,
+        req_permission: Permission,
+    ) -> bool {
+        match queries::get_session_by_id(conn, session_id) {
+            Ok(Some(session)) => {
+                // Ensure session hasn't expired
+                if session.is_expired() {
+                    println!("Session expired");
+                    return false;
+                }
+
+                // Verify if role has the requested permission
+                role.has_permission(&req_permission)
             }
-
-            let role = Role::new(&session.role, &session.user_id);
-
-            //verify role permissions return true if permission exits with role
-            role.has_permission(permission)
-        } else{
-            println!("Invalid or missing session");
-            false
+            Ok(None) => {
+                println!("Invalid or missing session");
+                false
+            }
+            Err(e) => {
+                eprintln!("Database error checking session: {}", e);
+                false
+            }
         }
     }
 }

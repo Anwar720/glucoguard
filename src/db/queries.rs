@@ -6,7 +6,9 @@ use chrono::Utc;
 use rusqlite::{params, Connection, Result, OptionalExtension};
 use crate::utils::{get_current_time_string};
 use std::error::Error;
-use crate::session::Session;
+use crate::session::{Session, SessionManager};
+use crate::access_control::Role;
+use crate::access_control::Permission;
 use std::time::UNIX_EPOCH;
 use tokio::time::Duration;
 
@@ -124,7 +126,36 @@ pub fn get_all_clinicians(conn: &rusqlite::Connection) -> Result<Vec<String>> {
 }
 
 // create patient account from patient object
-pub fn insert_patient_account_details_in_db(conn: &rusqlite::Connection, patient: &Patient) -> Result<()> {
+pub fn insert_patient_account_details_in_db(
+    conn: &rusqlite::Connection,
+    patient: &Patient,
+    session_id: &str,
+) -> rusqlite::Result<()> {
+
+    let required_permission = Permission::CreatePatientAccount;
+    let session_manager = SessionManager::new();
+
+    // Retrieve session
+    let opt_session: Option<Session> = session_manager.get_session_by_id(conn, session_id);
+    let session: Session = opt_session
+        .ok_or(rusqlite::Error::InvalidQuery)?;
+
+    // Check if session is expired
+    if session.is_expired() {
+        eprintln!("Session has expired!");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
+    // Convert session.role (String) into Role
+    let role: Role = Role::new(&session.role,&session.user_id);
+
+    // Check permission
+    if !session_manager.check_permissions(conn, session_id, &role, required_permission) {
+        eprintln!("Access denied: insufficient permissions.");
+        return Err(rusqlite::Error::InvalidQuery);
+    }
+
+    // Insert patient into DB
     let sql = "
         INSERT INTO patients (
             patient_id,
@@ -143,7 +174,7 @@ pub fn insert_patient_account_details_in_db(conn: &rusqlite::Connection, patient
 
     conn.execute(
         sql,
-        params![
+        rusqlite::params![
             patient.patient_id,
             patient.first_name,
             patient.last_name,
@@ -155,11 +186,13 @@ pub fn insert_patient_account_details_in_db(conn: &rusqlite::Connection, patient
             patient.high_glucose_threshold,
             patient.clinician_id,
             patient.caretaker_id
-        ]
+        ],
     )?;
 
+    println!("Patient account successfully created.");
     Ok(())
 }
+
 // insert patient activation code for patient to create account
 pub fn insert_activation_code(conn: &rusqlite::Connection,code: &str,user_type: &str,user_id: &str,issuer_id: &str) -> Result<()> {
     let sql = "
