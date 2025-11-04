@@ -339,7 +339,7 @@ pub fn validate_activation_code(
             user_type: row.get(0)?,
             user_id: row.get(1)?,
         })
-    }).optional()?; // <-- now works
+    }).optional()?;
 
     Ok(info)
 }

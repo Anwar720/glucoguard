@@ -71,7 +71,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
                 },
                 5=>{
                     // get patient data and create patient account 
-                    handle_patient_account_creation(&conn,role, &session_id);
+                    handle_patient_account_creation(&conn, role, &session_id);
                 },
                 6 => {
                     println!("Logging out...");
@@ -85,8 +85,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
                 _ => println!("Invalid choice"),
             }
         }
-    
-
+    }
 }
 
 fn handle_patient_account_creation(conn:&rusqlite::Connection, role:&Role, session_id: &str){

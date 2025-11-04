@@ -18,7 +18,7 @@ def main():
             CREATE TABLE temp_insulin_pump (
               patient_id TEXT,
               action_type TEXT,
-              dosage_units REAL,
+              dosage_units INT,
               requested_by TEXT
             );
         """)
@@ -33,7 +33,7 @@ def main():
                     continue
                 patient_id = row[0]
                 action_type = row[1]
-                dosage_units = float(row[2])
+                dosage_units = row[2]
                 requested_by = row[3] if len(row) >= 4 and row[3] else "device"
                 rows.append((patient_id, action_type, dosage_units, requested_by))
 

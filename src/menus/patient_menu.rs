@@ -107,9 +107,9 @@ pub fn create_and_display_caretaker_activation_code(
     match insert_activation_code(conn, &activation_code, new_account_type, user_id.as_str(), role.id.as_str()) {
         Ok(()) => {
             // Add caretaker to team
-            if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str()) {
+            if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str(), session_id) {
                 eprintln!(" Failed to add caretaker team member: {}", e);
-            }
+}
 
             // add caretaker user_id to patient table
             add_caretaker_to_patient_account(conn,role.id.as_str(),user_id.as_str());
