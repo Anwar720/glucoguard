@@ -1,36 +1,28 @@
 //access management using RBAC model 
 use std::collections::HashSet;
 
-// lists os all permissions 
+// lists os all permissions
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-
 pub enum Permission {
-    ViewPatient,
+    // Admin Permissions only
     CreateClinicianAccount,
+    ViewClinicianAccount,
     RemoveClinicianAccount,
+    // Clinician Permissions only
     CreatePatientAccount,
-    CreateCaretakerLink,
     EditPatientData,
+    ViewPatient,
+    SetDosageLimits,
+    AdjustInsulinParameters,
+    // Patient Permissions only
+    CreateCaretakerLink,
+    // Patient and Caretaker Permissions
     ViewGlucose,
-    AddGlucose,
+    ViewInsulinRates,
+    RequestBolusDose,
+    EditBasalDose,
+    ReviewHistoricalData,
     ViewAlerts,
-}
-
-impl Permission{
-    pub fn perm_description(&self) -> &str {
-        //check its value and prints out description of permi
-        match self{
-            Permission::ViewPatient => "View Patient Information",
-            Permission::CreateClinicianAccount => "Create a clinician account",
-            Permission::RemoveClinicianAccount => "Remove a clinician account",
-            Permission::CreatePatientAccount => "Create a patient account",
-            Permission::CreateCaretakerLink => "Create a caretaker link",
-            Permission::EditPatientData => "Edit patient information",
-            Permission::ViewGlucose => "View glucose readings",
-            Permission::AddGlucose => "Request glucose injection",
-            Permission::ViewAlerts => "View alerts",
-        }
-    }
 }
 
 // struct to represent roles and their associated permissions
@@ -63,25 +55,32 @@ impl Role{
         match role_name{
             "admin" => {
                 perms.insert(Permission::CreateClinicianAccount);
+                perms.insert(Permission::ViewClinicianAccount);
                 perms.insert(Permission::RemoveClinicianAccount);
             }
             "clinician" => {
                 perms.insert(Permission::CreatePatientAccount);
                 perms.insert(Permission::EditPatientData);
-                perms.insert(Permission::ViewGlucose);
-                perms.insert(Permission::ViewAlerts);
                 perms.insert(Permission::ViewPatient);
+                perms.insert(Permission::SetDosageLimits);
+                perms.insert(Permission::AdjustInsulinParameters);
             }
             "patient" => {
-                perms.insert(Permission::ViewPatient);
-                perms.insert(Permission::ViewGlucose);
-                perms.insert(Permission::AddGlucose);
                 perms.insert(Permission::CreateCaretakerLink);
+                perms.insert(Permission::ViewGlucose);
+                perms.insert(Permission::ViewInsulinRates);
+                perms.insert(Permission::RequestBolusDose);
+                perms.insert(Permission::EditBasalDose);
+                perms.insert(Permission::ReviewHistoricalData);
+                perms.insert(Permission::ViewAlerts);
             }
             "caretaker" => {
-                perms.insert(Permission::ViewPatient);
                 perms.insert(Permission::ViewGlucose);
-
+                perms.insert(Permission::ViewInsulinRates);
+                perms.insert(Permission::RequestBolusDose);
+                perms.insert(Permission::EditBasalDose);
+                perms.insert(Permission::ReviewHistoricalData);
+                perms.insert(Permission::ViewAlerts);
             }
             _ => {
                 eprintln!("Warning: Unknown role '{}', no permissions assigned.", role_name);

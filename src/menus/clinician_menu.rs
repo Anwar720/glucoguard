@@ -5,129 +5,85 @@ use crate::auth::{generate_one_time_code};
 use crate::db::queries::{insert_activation_code,
                         insert_patient_account_details_in_db,
                         get_patients_by_clinician_id};
-use rusqlite::{Connection,Result};
+use rusqlite::{Connection};
 use crate::session::SessionManager;
-use crate::insulin::{get_one_patient_by_clinician_id,display_patient_complete_glucose_insulin_history,
-                        get_patient_data_from_patient_table};
-use std::io::{self, Write};
-use crate::input_validation::{read_non_empty_input,read_valid_date_dd_mm_yyyy,read_valid_float};
 
 //Takes in db connection and role struct:
-    // Role{
-    //      name: String,
-    //      id: String, // user id 
-    //      permissions: HashSet<Permission>,
-    // }
 pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &str) {
     let session_manager = SessionManager::new();
 
     loop {
-        // Fetch session from the database
-        let session = match session_manager.get_session_by_id(conn, session_id) {
-            Some(s) => s,
-            None => {
-                println!("Invalid or expired session. Please log in again.");
-                return;
-            }
-        };
-
-        // Check if session is expired
-        if session.is_expired() {
-            println!("Session has expired. Logging you out...");
-            if let Err(e) = session_manager.remove_session(conn, session_id) {
-                println!("Failed to remove session: {}", e);
-            }
+        // check access and session validity
+        if !role.has_permission(&crate::access_control::Permission::ViewPatient) {
+            println!("Access denied: You do not have permission to view this menu.");
             return;
         }
 
-        // Check role is Admin
-        if session.role != "clinician"{
-            println!("Invalid access rights to view page");
+        if let Some(session) = queries::get_session(conn, session_id).unwrap_or(None) {
+            if session.is_expired() {
+                println!("Session expired. Please log in again.");
+                // Remove expired session
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
+                    println!("Failed to remove expired session: {}", e);
+                }
+                return;
+            }
+        } else {
+            println!("No active session found. Please log in.");
             return;
         }
 
         println!("=== Clinician Menu ===");
-        println!("1. View patient insulin history.");
-        println!("2. Edit patient insulin parameters.");// 
-        // println!("3. Edit patient glucose parameters.");
-        println!("3. View patient info");
-        println!("4. Create Patient Account");
-        println!("5. Logout");
-        println!("Enter your choice: ");
-
+        println!("1. Create Patient Account");
+        println!("2. Edit patient data");
+        println!("3. View Patients under your care");
+        println!("4. Set Dosage Limits and Safety Thresholds");
+        println!("5. Adjust insulin parameters");
+        println!("6. Logout");
+        
+        print!("Enter your choice: ");
         let choice = utils::get_user_choice();
 
-        // get patient being treated by clinician 
-        let current_patient_id:String =  get_one_patient_by_clinician_id(&conn,&session.user_id ).expect("REASON");
-
         match choice {
-        
-                1 => {
-                    // requres that we have a valid patient_id for clinician 
-                    if current_patient_id.is_empty(){
-                        println!("Cannot perform this action because no patient is assigned.");
-                        continue;
-                    }
-
-                    //View logs of all insulin deliveries and glucose readings.
-                    // request_insulin_flow(conn,&session.user_id);
-                    display_patient_complete_glucose_insulin_history(conn,&current_patient_id);
-                }, 
-                2 =>{
-                    // requres that we have a valid patient_id for clinician 
-                    if current_patient_id.is_empty(){
-                        println!("Cannot perform this action because no patient is assigned.");
-                        continue;
-                    }
-
-                    //Adjust insulin delivery parameters based on patient needs.
-                    // basal and bolus modifications
-                        if let Some((bolus, basal)) = prompt_new_bolus_basal_limits() {
-                            println!("New limits set - Bolus: {:.2}, Basal: {:.2}", bolus, basal);
-                            match update_patient_bolus_basal(&conn, &current_patient_id, bolus, basal) {
-                                Ok(rows_updated) if rows_updated > 0 => println!("Patient limits updated successfully."),
-                                Ok(_) => println!("No patient found with that ID."),
-                                Err(e) => eprintln!("Error updating patient limits"),
-                            }
-                        }
-                },
-                // 3=>{
-                //     // requres that we have a valid patient_id for clinician 
-                //     if current_patient_id.is_empty(){
-                //         println!("Cannot perform this action because no patient is assigned.");
-                //         continue;
-                //     }
-
-                //     //Set dosage limits, safety thresholds, and alert conditions.
-                //     // prompts user for max,min glucose and update into patients table
-                //     match update_patient_max_min_glucose(&conn, &current_patient_id) {
-                //         Ok(rows_updated) if rows_updated > 0 => println!("Patient glucose limits updated successfully."),
-                //         Ok(_) => println!("No patient found with that ID."),
-                //         Err(e) => eprintln!("Error updating patient limits"),
-                //     }
-                // },
-                3=>{
-                    // view patient info 
-                    show_patient_data(conn, &current_patient_id)
-                },
-                4=>{
-                    // get patient data and create patient account 
-                    handle_patient_account_creation(&conn,role, &session_id);
-                },
-                5 => {
-                    println!("Logging out...");
-                    if let Err(e) = session_manager.remove_session(conn, session_id) {
-                        println!("Failed to remove session: {}", e);
-                    } else {
-                        println!("Session removed. Goodbye!");
-                    }
-                    return;
-                },
-                _ => println!("Invalid choice"),
-            }
+            1 => {
+                // Create Patient Account
+                println!("--- Create Patient Account ---");
+                handle_patient_account_creation(conn, role, session_id);
+            },
+            2 => {
+                // Edit patient data
+                println!("--- Edit Patient Data ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
+            3 => {
+                // View Patients under your care
+                println!("--- View Patients ---");
+                show_patients_menu(conn, &role.id, session_id);
+            },
+            4 => {
+                // Set Dosage Limits and Safety Thresholds
+                println!("--- Set Dosage Limits and Safety Thresholds ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
+            5 => {
+                // Adjust insulin parameters
+                println!("--- Adjust Insulin Parameters ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
+            6 => {
+                // Logout
+                println!("Logging out...");
+                // Remove session
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
+                    println!("Failed to remove session: {}", e);
+                }
+                break;
+            },
         }
-    
-
+    }
 }
 
 fn handle_patient_account_creation(conn:&rusqlite::Connection, role:&Role, session_id: &str){
@@ -176,63 +132,6 @@ fn show_patients_menu(conn: &Connection, clinician_id: &String, session_id: &str
         }
         Err(e) => {
             eprintln!("Error retrieving patients: {}", e);
-        }
-    }
-}
-
-
-/// Prompts the user to enter new bolus and basal insulin limits.
-/// Returns a tuple: (bolus_limit, basal_limit)
-pub fn prompt_new_bolus_basal_limits() -> Option<(f32, f32)> {
-
-    let basal_rate = read_valid_float("Basal Rate (0–100): ", 0.0, 100.0);
-    let bolus_rate = read_valid_float("Bolus Rate (0–100): ", 0.0, 100.0);
-
-    Some((bolus_rate, basal_rate))
-}
-
-
-///// Updates the bolus and basal insulin limits for a given patient.
-pub fn update_patient_bolus_basal(conn: &Connection,patient_id: &str,bolus: f32,basal: f32,
-) -> Result<usize> {
-    conn.execute(
-        "UPDATE patients
-         SET bolus_rate = ?1,
-             basal_rate = ?2
-         WHERE patient_id = ?3",
-        rusqlite::params![bolus, basal, patient_id],
-    )
-}
-
-pub fn update_patient_max_min_glucose(conn: &Connection,patient_id: &str) -> Result<usize> {
-
-    let low_glucose_threshold = read_valid_float("Low Glucose Threshold (0–70): ", 0.0, 69.0);
-    let high_glucose_threshold = read_valid_float("High Glucose Threshold (): ", 100.0, 180.0);
-
-    conn.execute(
-        "UPDATE patients
-         SET low_glucose_threshold = ?1,
-            high_glucose_threshold = ?2
-         WHERE patient_id = ?3",
-        rusqlite::params![low_glucose_threshold, high_glucose_threshold, patient_id],
-    )
-}
-
-
-fn show_patient_data(conn: &rusqlite::Connection, patient_id: &str) {
-    match get_patient_data_from_patient_table(conn, patient_id) {
-        Ok(Some(patient)) => {
-            println!("\n--------Patient Info--------");
-            println!("Name: {} {}", patient.first_name, patient.last_name);
-            println!("Max Dosage: {:.2} units", patient.max_dosage);
-            println!("Glucose Thresholds: low {:.1}, high {:.1} \n",
-                     patient.low_glucose_threshold, patient.high_glucose_threshold);
-        }
-        Ok(None) => {
-            println!("No patient data found ");
-        }
-        Err(e) => {
-            eprintln!("Error fetching patient data: {}", e);
         }
     }
 }

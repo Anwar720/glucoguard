@@ -6,105 +6,105 @@ use crate::db::queries::{insert_activation_code,
 use crate::auth::{generate_one_time_code};
 use uuid::Uuid;
 use crate::session::SessionManager;
-use rusqlite::Connection;
-use crate::insulin::{display_patient_glucose_readings,
-        get_patient_data_from_patient_table,
-        get_patient_insulin_data,get_one_patient_by_caretaker_id,
-        display_patient_complete_glucose_insulin_history,
-        show_patient_current_basal_bolus_limits};
-
-
+use crate::db::queries;
+use crate::alerts;
 
 pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) {
     let session_manager = SessionManager::new();
     
     loop {
-
-    // Fetch session from the database
-        let session = match session_manager.get_session_by_id(conn, &session_id) {
-            Some(s) => s,
-            None => {
-                println!("Invalid or expired session. Please log in again.");
-                return;
-            }
-        };
-
-        // Check expiration
-        if session.is_expired() {
-            println!("Session has expired. Logging you out...");
-            if let Err(e) = session_manager.remove_session(conn, &session_id) {
-                println!("Failed to remove session: {}", e);
-            }
+        //check access and session validity
+        if !role.has_permission(&crate::access_control::Permission::ViewGlucoseReadings) {
+            println!("Access denied: You do not have permission to access the patient menu.");
             return;
         }
-
-        // Check role is Admin
-        if session.role != "patient"{
-            println!("Invalid access rights to view page");
+        if let Some(session) = queries::get_session(conn, session_id).unwrap_or(None) {
+            if session.is_expired() {
+                println!("Session expired. Please log in again.");
+                // Remove expired session
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
+                    println!("Failed to remove expired session: {}", e);
+                }
+                return;
+            }
+        } else {
+            println!("No active session found. Please log in.");
             return;
         }
 
         println!("=== Patient Menu ===");
-        println!("1) View most recent glucose readings.");
-        println!("2) View current basal and bolus options.");
-        println!("3) Request bolus insulin dose.");
-        println!("4) Configure basal insulin dose time.");
-        println!("5) View patient insulin history.");
-        println!("6. Create Caretaker activation code.");
-        println!("7. Logout");
-        println!("Enter your choice: ");
-
+        println!("1. Create Caretaker Activation Code");
+        println!("2. View Glucose Readings");
+        println!("3. View Insulin Rates");
+        println!("4. Request Bolus Dose");
+        println!("5. Edit Basal Dose");
+        println!("6. Review Historical Data");
+        println!("7. View Alerts");
+        println!("8. Logout");
+        print!("Enter your choice: ");
         let choice = utils::get_user_choice();
-    
-    
-
-    match choice {
-
+        match choice {
             1 => {
-                //View the patient’s most recent glucose readings.
-                display_patient_glucose_readings(&conn, &session.user_id, true);
+                // Create Caretaker Activation Code
+                println!("--- Create Caretaker Activation Code ---");
+                create_and_display_caretaker_activation_code(conn, role, session_id);
             },
             2 => {
-                // View the patient’s current basal rate and bolus insulin options.
-                show_patient_current_basal_bolus_limits(conn,&session.user_id);
-            }, 
+                // View Glucose Readings
+                println!("--- View Glucose Readings ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
             3 => {
-                //  Request a bolus insulin dose.
-                //– Patients cannot request more than the prescribed maximum dose or violate safety limits
-
-            }, 
+                // View Insulin Rates
+                println!("--- View Insulin Rates ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
             4 => {
-                //Configure basal insulin dose time.
-                // Patients can adjust the basal insulin dose, which will be effective within 24 hours, so as
-                // not to overlap a previous dose.
-                // – Patients cannot request more than the prescribed maximum dose or violate safety limits.
-
-            }, 
+                // Request Bolus Dose
+                println!("--- Request Bolus Dose ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
             5 => {
-                //Review historical insulin delivery and glucose data.
-                display_patient_complete_glucose_insulin_history(conn,&session.user_id);
-            }, 
+                // Edit Basal Dose
+                println!("--- Edit Basal Dose ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
             6 => {
-                //
-                create_and_display_caretaker_activation_code(conn,&role);
-            }, 
+                // Review Historical Data
+                println!("--- Review Historical Data ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
             7 => {
-                println!("Logging out...");
-                if let Err(e) = session_manager.remove_session(conn, &session_id) {
+                // View Alerts
+                println!("--- View Alerts ---");
+                // Functionality to be implemented
+                println!("Feature under development.");
+            },
+            8 => {
+                /println!("Logging out...");
+                // Synchronous session removal
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
                     println!("Failed to remove session: {}", e);
                 } else {
                     println!("Session removed. Goodbye!");
                 }
                 return;
             },
-            _ => println!("Invalid choice"),
+            _ => {
+                println!("Invalid choice. Please try again.");
+            }
         }
     }
-    
 }
 pub fn create_and_display_caretaker_activation_code(
     conn: &rusqlite::Connection,
-    role: &Role 
+    role: &Role,
+    session_id: &str
 ) {
     // Generate a one-time activation code
     let activation_code = generate_one_time_code(15);
@@ -116,6 +116,9 @@ pub fn create_and_display_caretaker_activation_code(
     match insert_activation_code(conn, &activation_code, new_account_type, user_id.as_str(), role.id.as_str()) {
         Ok(()) => {
             // Add caretaker to team
+            if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str(), session_id) {
+                eprintln!(" Failed to add caretaker team member: {}", e);
+}
 
             // add caretaker user_id to patient table
             add_caretaker_to_patient_account(conn,role.id.as_str(),user_id.as_str());

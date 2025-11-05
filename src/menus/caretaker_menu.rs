@@ -2,90 +2,78 @@ use crate::utils;
 use crate::access_control::Role; 
 use crate::session::SessionManager;
 use rusqlite::Connection;
-use crate::insulin::{display_patient_glucose_readings,
-        get_patient_data_from_patient_table,
-        get_patient_insulin_data,
-        get_one_patient_by_caretaker_id,
-        display_patient_complete_glucose_insulin_history,
-        show_patient_current_basal_bolus_limits
-};
-
+use crate::alerts;
+use::crate::insulinsystem::{cgm, insulin};
 
 pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) {
     let session_manager = SessionManager::new();
     
     loop {
-
-         // Fetch session from the database
-        let session = match session_manager.get_session_by_id(conn, &session_id) {
-            Some(s) => s,
-            None => {
-                println!("Invalid or expired session. Please log in again.");
-                return;
-            }
-        };
-
-        // Check expiration
-        if session.is_expired() {
-            println!("Session has expired. Logging you out...");
-            if let Err(e) = session_manager.remove_session(conn, &session_id) {
-                println!("Failed to remove session: {}", e);
-            }
+        //check access and session validity
+        if !role.has_permission(&crate::access_control::Permission::ViewGlucose) {
+            println!("Access denied: You do not have permission to access the caretaker menu.");
             return;
         }
-        
-        // Check role is Admin
-        if session.role != "caretaker"{
-            println!("Invalid access rights to view page");
+        if let Some(session) = crate::db::queries::get_session(conn, session_id).unwrap_or(None) {
+            if session.is_expired() {
+                println!("Session expired. Please log in again.");
+                // Remove expired session
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
+                    println!("Failed to remove expired session: {}", e);
+                }
+                return;
+            }
+        } else {
+            println!("No active session found. Please log in.");
             return;
         }
 
         println!("=== CareTaker Menu ===");
-
-        println!("1) View most recent glucose readings.");
-        println!("2) View current basal and bolus options.");
-        println!("3) Request bolus insulin dose.");
-        println!("4) Configure basal insulin dose time.");
-        println!("5) View patient insulin history.");
-        println!("6. Logout");
-        println!("Enter your choice: ");
+        println!("1. View Patient's Recent Glucose Readings");
+        println!("2. View Patient's Current Basal Rate and Bolus Insulin Options");
+        println!("3. Request Bolus Insulin Dose");
+        println!("4. Configure Basal Insulin Dose Time");
+        println!("5. Review Historical Insulin Delivery and Glucose Data");
+        println!("6. View Alerts");
+        println!("7. Logout");
+        print!("Enter your choice: ");
         let choice = utils::get_user_choice();
 
-
-        // get patient being treated by caretaker
-        let current_patient_id:String =  get_one_patient_by_caretaker_id(&conn,&session.user_id ).expect("REASON");
-
         match choice {
-
             1 => {
-                //View the patient’s most recent glucose readings.
-                display_patient_glucose_readings(&conn, &current_patient_id, true);
+                // View Patient's Recent Glucose Readings
+                println!("--- View Patient's Recent Glucose Readings ---");
+                cgm::view_patient_glucose_readings(conn);
             },
             2 => {
-                // View the patient’s current basal rate and bolus insulin options.
-                show_patient_current_basal_bolus_limits(conn,&current_patient_id);
-            }, 
+                // View Patient's Current Basal Rate and Bolus Insulin Options
+                println!("--- View Patient's Current Basal Rate and Bolus Insulin Options ---");
+                queries::view_patient_insulin_options(conn);
+            },
             3 => {
-                //Request a bolus insulin dose.
-                // – Caretakers cannot request more than the prescribed maximum dose or violate safety limits.
-                // – Caretakers cannot request more than one dose per every four hours (corresponding to
-                // three meals a day).
-
-            }, 
+                // Request Bolus Insulin Dose
+                println!("--- Request Bolus Insulin Dose ---");
+                insulin::request_bolus_dose(conn);
+            },
             4 => {
-                //Configure basal insulin dose time.
-                // – Caretakers can adjust the basal insulin dose, which will be effective within 24 hours, so as
-                // not to overlap a previous dose.
-                // – Caretakers cannot request more than the prescribed maximum dose or violate safety limits.
-
-            }, 
+                // Configure Basal Insulin Dose Time
+                println!("--- Configure Basal Insulin Dose Time ---");
+                queries::adjust_basalL_rate(conn);
+            },
             5 => {
-                //Review historical insulin delivery and glucose data.
-                display_patient_complete_glucose_insulin_history(conn,&current_patient_id);
-            }, 
+                // Review Historical Insulin Delivery and Glucose Data
+                println!("--- Review Historical Insulin Delivery and Glucose Data ---");
+                cgm::review_historical_data(conn);
+            },
             6 => {
+                // View Alerts
+                println!("--- View Alerts ---");
+                alerts::view_alerts_hypo_and_hyper(conn);
+            },
+            7 => {
                 println!("Logging out...");
-                if let Err(e) = session_manager.remove_session(conn, &session_id) {
+                // Synchronous session removal
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
                     println!("Failed to remove session: {}", e);
                 } else {
                     println!("Session removed. Goodbye!");
@@ -96,4 +84,3 @@ pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &s
         }
     }
 }
-

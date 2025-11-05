@@ -60,13 +60,13 @@ fn create_glucose_readings_table(conn:&rusqlite::Connection)->rusqlite::Result<(
 fn create_insulin_logs_table(conn:&rusqlite::Connection)->rusqlite::Result<()> {
     let sql = "
         CREATE TABLE IF NOT EXISTS insulin_logs (
-        dosage_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        patient_id TEXT NOT NULL,
-        action_type TEXT NOT NULL,
-        dosage_units REAL NOT NULL,
-        requested_by TEXT NOT NULL,
-        dosage_time TEXT NOT NULL
-    );";
+            dosage_id INTEGER PRIMARY KEY UNIQUE,
+            patient_id INTEGER NOT NULL,
+            action_type TEXT NOT NULL,
+            dosage_units REAL NOT NULL,
+            requested_by TEXT NOT NULL,
+            dosage_time TEXT NOT NULL
+        )";
     conn.execute(sql, [])?;
     Ok(())
 }

@@ -12,3 +12,6 @@ pub fn get_user_choice() -> i32 {
 pub fn get_current_time_string()->String{
     Utc::now().to_rfc3339()
 }
+
+//catch error in input strin
+pub fn input_text()

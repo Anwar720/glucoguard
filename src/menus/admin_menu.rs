@@ -9,66 +9,64 @@ pub fn show_admin_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) 
     let session_manager = SessionManager::new();
 
     loop {
-
-        // Fetch session from the database
-        let session = match session_manager.get_session_by_id(conn, session_id) {
-            Some(s) => s,
-            None => {
-                println!("Invalid or expired session. Please log in again.");
-                return;
-            }
-        };
-
-        // Check expiration
-        if session.is_expired() {
-            println!("Session has expired. Please log in again.");
+        //check access and session validity
+        if !role.has_permission(&crate::access_control::Permission::CreateClinicianAccount) {
+            println!("Access denied: You do not have permission to access the admin menu.");
             return;
         }
-
-        // Check user role is Admin
-        if session.role != "admin"{
-            println!("Invalid access rights to view page");
+        if let Some(session) = queries::get_session(conn, session_id).unwrap_or(None) {
+            if session.is_expired() {
+                println!("Session expired. Please log in again.");
+                // Remove expired session
+                if let Err(e) = session_manager.remove_session(conn, session_id) {
+                    println!("Failed to remove expired session: {}", e);
+                }
+                return;
+            }
+        } else {
+            println!("No active session found. Please log in.");
             return;
         }
 
         println!("\n=== Admin Menu ===");
         println!("1. Create Clinician Account");
-        println!("2. View Clinician Account List");
-        println!("3. Logout");
+        println!("2. View Clinician Accounts");
+        println!("3. Remove Clinician Account");
+        println!("4. Logout");
         print!("Enter your choice: ");
         let choice = utils::get_user_choice();
 
         match choice {
-            1 => {
-
-                // Get username and password input from user
-                match get_new_account_credentials() {
-                    Ok((username, password)) => {
-                        // Create the user in the database
-                        match queries::create_user(&conn, &username, &password, "clinician",None) {
-                            Ok(_) => println!("\nClinician account successfully created."),
-                            Err(e) => println!("\nError creating account: {}", e),
-                        }
-                    }
-                    Err(e) => eprintln!("Failed to read input: {}", e),
+            1 => {// Create Clinician Account
+                println!("--- Create Clinician Account ---");
+                let (username, password) = get_new_account_credentials();
+                match queries::create_clinician_account(conn, &username, &password) {
+                    Ok(_) => println!("Clinician account '{}' created successfully.", username),
+                    Err(e) => println!("Failed to create clinician account: {}", e),
                 }
-            }
-
-            2 => {
-                // Display list of clinicians
-                match queries::get_all_clinicians(conn) {
+            },
+            2 => {// View Clinician Accounts
+                println!("--- View Clinician Accounts ---");
+                match queries::get_all_clinician_accounts(conn) {
                     Ok(clinicians) => {
-                        println!("\nClinician accounts:");
-                        for name in clinicians {
-                            println!("- {}", name);
+                        for clinician in clinicians {
+                            println!("ID: {}, Username: {}", clinician.id, clinician.username);
                         }
                     }
-                    Err(e) => println!("Failed to fetch clinicians: {}", e),
+                    Err(e) => println!("Failed to retrieve clinician accounts: {}", e),
                 }
+            },
+            3 => {// Remove Clinician Account
+                println!("--- Remove Clinician Account ---");
+                print!("Enter Clinician ID to remove: ");
+                let clinician_id = utils::get_user_choice();
+                match queries::remove_clinician_account(conn, clinician_id) {
+                    Ok(_) => println!("Clinician account with ID {} removed successfully.", clinician_id),
+                    Err(e) => println!("Failed to remove clinician account: {}", e),
+                }
+            },
 
-            }, 
-
-            3 => {
+            4 => {
                 println!("Logging out...");
                 // Synchronous session removal
                 if let Err(e) = session_manager.remove_session(conn, session_id) {
