@@ -8,7 +8,10 @@ use uuid::Uuid;
 use crate::session::SessionManager;
 use rusqlite::Connection;
 use crate::insulin::{display_patient_glucose_readings,
-    get_patient_data_from_patient_table};
+        get_patient_data_from_patient_table,
+        get_patient_insulin_data,get_one_patient_by_caretaker_id,
+        display_patient_complete_glucose_insulin_history,
+        show_patient_current_basal_bolus_limits};
 
 
 
@@ -49,21 +52,21 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
         println!("5) View patient insulin history.");
         println!("6. Create Caretaker activation code.");
         println!("7. Logout");
-        print!("Enter your choice: ");
+        println!("Enter your choice: ");
+
         let choice = utils::get_user_choice();
     
-
+    
 
     match choice {
 
             1 => {
                 //View the patient’s most recent glucose readings.
-                //view_patient_summary_flow(conn)
                 display_patient_glucose_readings(&conn, &session.user_id, true);
             },
             2 => {
                 // View the patient’s current basal rate and bolus insulin options.
-                show_patinet_current_basal_bolus_limits(conn,&session.user_id);
+                show_patient_current_basal_bolus_limits(conn,&session.user_id);
             }, 
             3 => {
                 //  Request a bolus insulin dose.
@@ -79,6 +82,7 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
             }, 
             5 => {
                 //Review historical insulin delivery and glucose data.
+                display_patient_complete_glucose_insulin_history(conn,&session.user_id);
             }, 
             6 => {
                 //
@@ -112,9 +116,6 @@ pub fn create_and_display_caretaker_activation_code(
     match insert_activation_code(conn, &activation_code, new_account_type, user_id.as_str(), role.id.as_str()) {
         Ok(()) => {
             // Add caretaker to team
-            // if let Err(e) = add_caretaker_team_member(conn, user_id.as_str(), role.id.as_str()) {
-            //     eprintln!(" Failed to add caretaker team member: {}", e);
-            // }
 
             // add caretaker user_id to patient table
             add_caretaker_to_patient_account(conn,role.id.as_str(),user_id.as_str());
@@ -132,21 +133,3 @@ pub fn create_and_display_caretaker_activation_code(
     }
 }
 
-
-fn show_patinet_current_basal_bolus_limits(conn:&rusqlite::Connection, patient_id:&String){
-    match get_patient_data_from_patient_table(conn, patient_id) {
-        Ok(Some(patient)) => {
-            println!("\n--------Patient dosage info --------");
-            println!("Name: {} {}", patient.first_name, patient.last_name);
-            println!("Max Dosage: {:.2} units", patient.max_dosage);
-            println!("Glucose Thresholds: low {:.1}, high {:.1} \n",
-                    patient.low_glucose_threshold, patient.high_glucose_threshold);
-        }
-        Ok(None) => {
-            println!("No patient found with ID: {}", patient_id);
-        }
-        Err(e) => {
-            eprintln!("Error fetching patient data: {}", e);
-        }
-    }
-}

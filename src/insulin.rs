@@ -36,6 +36,18 @@ pub fn get_one_patient_by_clinician_id(conn: &Connection, clinician_id: &str) ->
     // Return empty string if no patient found
     Ok(result.unwrap_or_else(|| "".to_string()))
 }
+pub fn get_one_patient_by_caretaker_id(conn: &Connection, caretaker_id: &str) -> rusqlite::Result<String> {
+    let result: Option<String> = conn
+        .query_row(
+            "SELECT patient_id FROM patients WHERE caretaker_id = ?1 LIMIT 1",
+            rusqlite::params![caretaker_id],
+            |row| row.get(0),
+        )
+        .optional()?; // converts "no row" into Ok(None)
+
+    // Return empty string if no patient found
+    Ok(result.unwrap_or_else(|| "".to_string()))
+}
 
 
 //# Return Type
@@ -161,8 +173,8 @@ pub fn get_patient_insulin_data(conn: &Connection, patient_id: &str, display_jus
 }
 
 // displays patient glucose readings and if display_just_latest_one is true then just display just one latest reading
-pub fn display_patient_glucose_readings(conn: &Connection, patient_id: &str, display_just_latest_one: bool) {
-    match get_patient_glucose_history(conn, patient_id,display_just_latest_one) {
+pub fn display_patient_glucose_readings(conn: &Connection, patient_id: &str, display_just_latest_glucose: bool) {
+    match get_patient_glucose_history(conn, patient_id,display_just_latest_glucose) {
         Ok(readings) => {
             if readings.is_empty() {
                 println!("No glucose readings found for this patient.");
@@ -205,4 +217,22 @@ pub fn display_patient_complete_glucose_insulin_history(conn: &Connection, patie
     }
 
 
+}
+
+pub fn show_patient_current_basal_bolus_limits(conn:&rusqlite::Connection, patient_id:&String){
+    match get_patient_data_from_patient_table(conn, patient_id) {
+        Ok(Some(patient)) => {
+            println!("\n--------Patient dosage info --------");
+            println!("Name: {} {}", patient.first_name, patient.last_name);
+            println!("Max Dosage: {:.2} units", patient.max_dosage);
+            println!("Glucose Thresholds: low {:.1}, high {:.1} \n",
+                    patient.low_glucose_threshold, patient.high_glucose_threshold);
+        }
+        Ok(None) => {
+            println!("No patient found with ID: {}", patient_id);
+        }
+        Err(e) => {
+            eprintln!("Error fetching patient data: {}", e);
+        }
+    }
 }

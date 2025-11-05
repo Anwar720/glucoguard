@@ -58,7 +58,7 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
         let choice = utils::get_user_choice();
 
         // get patient being treated by clinician 
-        let current_patient_id:String =  get_one_patient_by_clinician_id(&conn,&session.user_id ).expect("REASON");;
+        let current_patient_id:String =  get_one_patient_by_clinician_id(&conn,&session.user_id ).expect("REASON");
 
         match choice {
         

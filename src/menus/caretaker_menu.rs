@@ -2,6 +2,14 @@ use crate::utils;
 use crate::access_control::Role; 
 use crate::session::SessionManager;
 use rusqlite::Connection;
+use crate::insulin::{display_patient_glucose_readings,
+        get_patient_data_from_patient_table,
+        get_patient_insulin_data,
+        get_one_patient_by_caretaker_id,
+        display_patient_complete_glucose_insulin_history,
+        show_patient_current_basal_bolus_limits
+};
+
 
 pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) {
     let session_manager = SessionManager::new();
@@ -40,17 +48,22 @@ pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &s
         println!("4) Configure basal insulin dose time.");
         println!("5) View patient insulin history.");
         println!("6. Logout");
-        print!("Enter your choice: ");
+        println!("Enter your choice: ");
         let choice = utils::get_user_choice();
+
+
+        // get patient being treated by caretaker
+        let current_patient_id:String =  get_one_patient_by_caretaker_id(&conn,&session.user_id ).expect("REASON");
 
         match choice {
 
             1 => {
                 //View the patient’s most recent glucose readings.
-                //view_patient_summary_flow(conn)
+                display_patient_glucose_readings(&conn, &current_patient_id, true);
             },
             2 => {
                 // View the patient’s current basal rate and bolus insulin options.
+                show_patient_current_basal_bolus_limits(conn,&current_patient_id);
             }, 
             3 => {
                 //Request a bolus insulin dose.
@@ -68,6 +81,7 @@ pub fn show_caretaker_menu(conn: &rusqlite::Connection,role:&Role,session_id: &s
             }, 
             5 => {
                 //Review historical insulin delivery and glucose data.
+                display_patient_complete_glucose_insulin_history(conn,&current_patient_id);
             }, 
             6 => {
                 println!("Logging out...");
