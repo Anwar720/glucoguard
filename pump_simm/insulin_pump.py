@@ -4,7 +4,7 @@ import sqlite3
 from pathlib import Path
 
 DB_PATH = Path("/Users/anwarjahid/Documents/Classes/security engineering/Project/glucoguard/data/database.db")
-CSV_PATH = Path("/Users/anwarjahid/Documents/Classes/security engineering/Project/glucoguard/pump_simm/gcm_reader.csv")
+CSV_PATH = Path("/Users/anwarjahid/Documents/Classes/security engineering/Project/glucoguard/pump_simm/insulin_injections.csv")
 
 def main():
     conn = sqlite3.connect(str(DB_PATH))

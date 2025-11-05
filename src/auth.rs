@@ -56,6 +56,7 @@ pub fn verify_password(password: &str, hashed_password: &str) -> Result<bool, Pa
     }
 }
 
+// used to create the activation code
 pub fn generate_one_time_code(size:usize)-> String {
     // Generate a secure random alphanumeric string of size length
     rand::thread_rng()

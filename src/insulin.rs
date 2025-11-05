@@ -9,6 +9,8 @@ use chrono::{NaiveDateTime, Local,TimeZone};
         pub max_dosage: f32,
         pub low_glucose_threshold: f32,
         pub high_glucose_threshold: f32,
+        pub basal_rate:f32,
+        pub bolus_rate:f32,
     }
     // hold glucose reading data
     #[derive(Debug)]
@@ -59,7 +61,7 @@ pub fn get_one_patient_by_caretaker_id(conn: &Connection, caretaker_id: &str) ->
 pub fn get_patient_data_from_patient_table(conn: &Connection, patient_id: &str) -> Result<Option<PatientSafety>> {
     let patient = conn
         .query_row(
-            "SELECT patient_id, first_name, last_name, max_dosage, low_glucose_threshold, high_glucose_threshold
+            "SELECT patient_id, first_name, last_name, max_dosage,basal_rate,bolus_rate, low_glucose_threshold, high_glucose_threshold
             FROM patients
             WHERE patient_id = ?1",
             rusqlite::params![patient_id],
@@ -69,8 +71,11 @@ pub fn get_patient_data_from_patient_table(conn: &Connection, patient_id: &str) 
                     first_name: row.get(1)?,
                     last_name: row.get(2)?,
                     max_dosage: row.get(3)?,
-                    low_glucose_threshold: row.get(4)?,
-                    high_glucose_threshold: row.get(5)?,
+                    basal_rate:row.get(4)?,
+                    bolus_rate:row.get(5)?,
+                    low_glucose_threshold: row.get(6)?,
+                    high_glucose_threshold: row.get(7)?,
+                    
                 })
             },
         )
@@ -225,8 +230,8 @@ pub fn show_patient_current_basal_bolus_limits(conn:&rusqlite::Connection, patie
             println!("\n--------Patient dosage info --------");
             println!("Name: {} {}", patient.first_name, patient.last_name);
             println!("Max Dosage: {:.2} units", patient.max_dosage);
-            println!("Glucose Thresholds: low {:.1}, high {:.1} \n",
-                    patient.low_glucose_threshold, patient.high_glucose_threshold);
+            println!("Basal rate: {:.1}, Bolus rate: {:.1} \n",
+                    patient.basal_rate, patient.bolus_rate);
         }
         Ok(None) => {
             println!("No patient found with ID: {}", patient_id);

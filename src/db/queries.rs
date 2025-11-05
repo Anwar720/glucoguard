@@ -34,11 +34,11 @@ pub fn create_user(
 ) -> Result<()> {
     // Check if username already exists
     if check_user_name_exists(conn, username)? {
-        eprintln!(" Username '{}' already exists.", username);
+        //eprintln!(" Username '{}' already exists.", username);
         return Err(rusqlite::Error::ExecuteReturnedResults);
     }
 
-    // Hash password
+    // Hash password : fn in auth.rs with argon2 and a salt
     let password_hash = match auth::hash_password(password) {
         Ok(hash) => hash,
         Err(_) => {

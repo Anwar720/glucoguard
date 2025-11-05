@@ -52,6 +52,7 @@ pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
     }
 }
 
+
 fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginResult{
     //return template for failed login 
     let failed_login = LoginResult {
@@ -71,6 +72,7 @@ fn user_login(conn:&rusqlite::Connection ,username:&str, password:&str)-> LoginR
     
     // check if user exists
     if let Some(user) = user {
+        // check password to hash 
         let password_is_valid = match auth::verify_password(password, &user.password_hash) {
             Ok(valid) => valid,
             Err(_) => {

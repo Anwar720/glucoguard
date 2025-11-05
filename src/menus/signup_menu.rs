@@ -9,10 +9,16 @@ pub fn show_signup_menu(conn: &Connection) -> Option<()> {
     // Step 1: Get and validate activation code
     let activation_code = read_input("Enter your activation code: ");
 
+    // checks database if the activation code exists in the activation_codes table
+    //code_info will hold
+        //user_type: String,
+        //user_id: String,
     let code_info = match validate_activation_code(conn, &activation_code) {
         Ok(Some(info)) => {
             // activation code is verified
             info // store info to use user_type and user_id
+            ////user_type: String,
+            //user_id: String,
         }
         Ok(None) => {
             eprintln!(" Invalid activation code. Please contact your clinician.");
@@ -26,6 +32,7 @@ pub fn show_signup_menu(conn: &Connection) -> Option<()> {
 
     // Step 2: Get valid username
     let username = loop {
+        // prompts user to enter user name and return username
         let input = read_input("Choose a username: ");
         if input.is_empty() {
             eprintln!("Username cannot be empty.");
@@ -48,12 +55,12 @@ pub fn show_signup_menu(conn: &Connection) -> Option<()> {
             eprintln!(" Passwords do not match. Try again.");
             continue;
         }
-
+        // makes sure password is 8 > length, contains upper,lower and a symbol
         if let Err(err) = validate_password_strength(&input) {
             eprintln!(" {}", err);
             continue;
         }
-
+        // password is now valid in the correct format and strength
         break input;
     };
 
@@ -62,14 +69,14 @@ pub fn show_signup_menu(conn: &Connection) -> Option<()> {
         conn,
         &username,
         &password,
-        &code_info.user_type,
-        Some(code_info.user_id.clone()), // use user_id from activation code
+        &code_info.user_type, // user role
+        Some(code_info.user_id.clone()), // user_id associated with from activation code
     ) {
         eprintln!(" Failed to create user: {}", err);
         return None;
     }
 
-    println!("✅ Account created successfully for username '{}'.", username);
+    println!("Account created successfully for username '{}'.", username);
     // remove activation code from table to indicate code used
     remove_activation_code(conn,&activation_code);
     Some(())
