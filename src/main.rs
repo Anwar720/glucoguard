@@ -4,12 +4,14 @@ mod auth;
 mod utils;
 mod access_control;
 mod input_validation;
+mod insulin;
 use crate::db::db_utils;
 use crate::db::initialize;
 use crate::menus::{login_menu,admin_menu,patient_menu,
-                  caretaker_menu,clinician_menu,home_menu,signup_menu};
+                caretaker_menu,clinician_menu,home_menu,signup_menu};
 mod session;
 use crate::session::SessionManager;
+
 
 
 fn main() {

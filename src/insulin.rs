@@ -1,282 +1,208 @@
-/* ---------- Insulin Request with Validation ---------- */
+use rusqlite::{Connection, Result, OptionalExtension,params};
+use chrono::{NaiveDateTime, Local,TimeZone};
 
-fn request_insulin_flow(conn: &rusqlite::Connection) {
-    println!("\nRequest Insulin");
-
-    let Some(patient_id) = prompt_parse_i32("Enter patient ID: ") else { return; };
-
-    // Fetch patient with safety limits
-    struct PatientSafety {
-        patient_id: String,
-        first_name: String,
-        last_name: String,
-        max_dosage: f32,
-        low_glucose_threshold: f32,
-        high_glucose_threshold: f32,
+// Fetch patient with safety limits
+    pub struct PatientSafety {
+        pub patient_id: String,
+        pub first_name: String,
+        pub last_name: String,
+        pub max_dosage: f32,
+        pub low_glucose_threshold: f32,
+        pub high_glucose_threshold: f32,
+    }
+    // hold glucose reading data
+    #[derive(Debug)]
+    pub struct GlucoseReading {
+        pub glucose_level: f32,
+        pub reading_time: String,
+        pub status: String,
     }
 
-    let patient = match conn.query_row(
-        "SELECT patient_id, first_name, last_name, max_dosage, low_glucose_threshold, high_glucose_threshold
-         FROM patients
-         WHERE patient_id = ?1",
-        rusqlite::params![patient_id],
-        |row| {
-            Ok(PatientSafety {
-                patient_id: row.get(0)?,
-                first_name: row.get(1)?,
-                last_name: row.get(2)?,
-                max_dosage: row.get(3)?,
-                low_glucose_threshold: row.get(4)?,
-                high_glucose_threshold: row.get(5)?,
-            })
-        },
-    ).optional() {
-        Ok(Some(p)) => p,
-        Ok(None) => {
-            println!("No patient found with ID {}.", patient_id);
-            return;
-        }
-        Err(e) => {
-            eprintln!("Lookup failed: {}", e);
-            return;
-        }
+/// # Return Type
+/// - **Result<Option<String>>**
+///   - `Ok(Some(patient_id))` → A patient was found for the clinician.
+///   - `Ok(None)` → No patient found for that clinician_id.
+///   - `Err(e)` → A database error occurred during the query.
+///
+pub fn get_one_patient_by_clinician_id(conn: &Connection, clinician_id: &str) -> rusqlite::Result<String> {
+    let result: Option<String> = conn
+        .query_row(
+            "SELECT patient_id FROM patients WHERE clinician_id = ?1 LIMIT 1",
+            rusqlite::params![clinician_id],
+            |row| row.get(0),
+        )
+        .optional()?; // converts "no row" into Ok(None)
+
+    // Return empty string if no patient found
+    Ok(result.unwrap_or_else(|| "".to_string()))
+}
+
+
+//# Return Type
+/// - **Result<Option<PatientSafety>>**
+///   - `Ok(Some(PatientSafety))` → A patient record was found and successfully parsed.
+///   - `Ok(None)` → No matching patient was found in the database.
+///   - `Err(e)` → A database or query error occurred during lookup.
+///
+pub fn get_patient_data_from_patient_table(conn: &Connection, patient_id: &str) -> Result<Option<PatientSafety>> {
+    let patient = conn
+        .query_row(
+            "SELECT patient_id, first_name, last_name, max_dosage, low_glucose_threshold, high_glucose_threshold
+            FROM patients
+            WHERE patient_id = ?1",
+            rusqlite::params![patient_id],
+            |row| {
+                Ok(PatientSafety {
+                    patient_id: row.get(0)?,
+                    first_name: row.get(1)?,
+                    last_name: row.get(2)?,
+                    max_dosage: row.get(3)?,
+                    low_glucose_threshold: row.get(4)?,
+                    high_glucose_threshold: row.get(5)?,
+                })
+            },
+        )
+        .optional()?; // This converts “no rows” into Ok(None)
+
+
+    Ok(patient)
+}
+
+
+// returns patient glucose history data as a vector
+pub fn get_patient_glucose_history(conn: &Connection,patient_id: &str, display_just_latest_one: bool,) -> Result<Vec<(String, f32, String)>> {
+    // Build query based on flag
+    let query = if display_just_latest_one {
+        "SELECT reading_time, glucose_level, status
+         FROM glucose_readings
+         WHERE patient_id = ?1
+         ORDER BY datetime(reading_time) DESC
+         LIMIT 1"
+    } else {
+        "SELECT reading_time, glucose_level, status
+         FROM glucose_readings
+         WHERE patient_id = ?1
+         ORDER BY datetime(reading_time) DESC"
     };
 
-    println!("Patient: {} {} (ID {})", patient.first_name, patient.last_name, patient.patient_id);
-    println!("Max dosage: {} units", patient.max_dosage);
+    let mut stmt = conn.prepare(query)?;
+    let readings = stmt
+        .query_map(params![patient_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?, // reading_time
+                row.get::<_, f32>(1)?,    // glucose_level
+                row.get::<_, String>(2)?, // status
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
-    // Check for recent insulin request (4-hour cooldown)
-    match conn.query_row(
-        "SELECT dosage_time 
+    Ok(readings)
+}
+
+
+pub fn get_patient_insulin_data(conn: &Connection, patient_id: &str, display_just_latest_one: bool) -> Result<()> {
+    // Build query depending on whether only the latest record should be shown
+    let query = if display_just_latest_one {
+        "SELECT dosage_id, action_type, dosage_units, requested_by, dosage_time
          FROM insulin_logs
          WHERE patient_id = ?1
          ORDER BY datetime(dosage_time) DESC
-         LIMIT 1",
-        rusqlite::params![patient_id],
-        |row| row.get::<_, String>(0),
-    ).optional() {
-        Ok(Some(last_dosage_time)) => {
-            // Check if last request was within 4 hours
-            let time_check: bool = conn.query_row(
-                "SELECT (julianday('now') - julianday(?1)) * 24.0 < 4.0",
-                rusqlite::params![last_dosage_time],
-                |row| row.get(0),
-            ).unwrap_or(false);
-
-            if time_check {
-                println!("❌ ERROR: Cannot request insulin.");
-                println!("Last insulin request was at {}.", last_dosage_time);
-                println!("Caretakers can only request one dose per every 4 hours.");
-                println!("Please wait at least 4 hours between requests.");
-                return;
-            } else {
-                println!("✓ Last request was more than 4 hours ago (at {}).", last_dosage_time);
-            }
-        }
-        Ok(None) => {
-            println!("✓ No previous insulin requests found for this patient.");
-        }
-        Err(e) => {
-            eprintln!("Warning: Could not check previous requests: {}", e);
-            // Continue anyway, but log the warning
-        }
-    }
-
-    // Check latest glucose reading
-    let latest_glucose = match conn.query_row(
-        "SELECT glucose_level FROM glucose_readings
+         LIMIT 1"
+    } else {
+        "SELECT dosage_id, action_type, dosage_units, requested_by, dosage_time
+         FROM insulin_logs
          WHERE patient_id = ?1
-         ORDER BY datetime(reading_time) DESC
-         LIMIT 1",
-        rusqlite::params![patient_id],
-        |row| row.get::<_, f32>(0),
-    ).optional() {
-        Ok(Some(level)) => {
-            println!("Latest glucose: {:.1} mg/dL (thresholds: low {} | high {})", 
-                     level, patient.low_glucose_threshold, patient.high_glucose_threshold);
-
-            // Safety check: BLOCK if glucose is already low
-            if level < patient.low_glucose_threshold {
-                println!("❌ ERROR: Cannot request insulin.");
-                println!("Glucose is below safe threshold ({:.1} < {:.1})", 
-                         level, patient.low_glucose_threshold);
-                println!("Request rejected for safety reasons.");
-                return; // Block instead of just warning
-            }
-            // Optional: Also block if glucose is too high (dangerous to add more insulin)
-            if level > patient.high_glucose_threshold + 50.0 { // e.g., way above threshold
-                println!("❌ ERROR: Glucose is critically high ({:.1} > {:.1})", 
-                         level, patient.high_glucose_threshold);
-                println!("Consult clinician before requesting additional insulin.");
-                return;
-            }
-            Some(level)
-        }
-        Ok(None) => {
-            println!("⚠️  WARNING: No glucose readings found for this patient.");
-            Some(-1.0) // sentinel value
-        }
-        Err(_) => None,
+         ORDER BY datetime(dosage_time) DESC"
     };
 
-    // action type: Basal/Bolus/Correction/etc.
-    let action_type = prompt_string("Action type (e.g., Bolus, Basal): ");
-    if action_type.trim().is_empty() {
-        eprintln!("Action type is required.");
-        return;
+    let mut stmt = conn.prepare(query)?;
+    let insulin_iter = stmt.query_map([patient_id], |row| {
+        Ok((
+            row.get::<_, i64>(0)?,    // dosage_id
+            row.get::<_, String>(1)?, // action_type
+            row.get::<_, f32>(2)?,    // dosage_units
+            row.get::<_, String>(3)?, // requested_by
+            row.get::<_, String>(4)?, // dosage_time
+        ))
+    })?;
+
+    let mut found = false;
+
+    if display_just_latest_one {
+        println!("\n--- Latest Insulin Log ---");
+    } else {
+        println!("\n--- Insulin Delivery History ---");
     }
 
-        // action type: Basal/Bolus/Correction/etc.
-        let action_type = prompt_string("Action type (e.g., Bolus, Basal): ");
-        if action_type.trim().is_empty() {
-            eprintln!("Action type is required.");
-            return;
-        }
+    for entry in insulin_iter {
+        found = true;
+        let (dosage_id, action_type, dosage_units, requested_by, time_str) = entry?;
 
-        // For Basal insulin: enforce 24-hour effective window (no overlap)
-        if action_type.trim().eq_ignore_ascii_case("Basal") {
-            match conn.query_row(
-                "SELECT dosage_time, dosage_units
-                 FROM insulin_logs
-                 WHERE patient_id = ?1
-                   AND LOWER(action_type) = 'basal'
-                 ORDER BY datetime(dosage_time) DESC
-                 LIMIT 1",
-                rusqlite::params![patient_id],
-                |row| {
-                    Ok((
-                        row.get::<_, String>(0)?,
-                        row.get::<_, f32>(1)?,
-                    ))
-                },
-            ).optional() {
-                Ok(Some((last_basal_time, last_basal_dose))) => {
-                    // Check if last basal adjustment was within 24 hours
-                    let within_24h: bool = conn.query_row(
-                        "SELECT (julianday('now') - julianday(?1)) * 24.0 < 24.0",
-                        rusqlite::params![last_basal_time],
-                        |row| row.get(0),
-                    ).unwrap_or(false);
+        // Convert timestamp to readable format
+        let formatted_time = if let Ok(parsed_time) =
+            NaiveDateTime::parse_from_str(&time_str, "%Y-%m-%d %H:%M:%S")
+        {
+            let local_time = Local.from_utc_datetime(&parsed_time);
+            local_time.format("%b %d, %Y %I:%M %p").to_string()
+        } else {
+            format!("Unparsed: {}", time_str)
+        };
 
-                    if within_24h {
-                        let hours_remaining = conn.query_row::<f64, _, _>(
-                            "SELECT 24.0 - ((julianday('now') - julianday(?1)) * 24.0)",
-                            rusqlite::params![last_basal_time],
-                            |row| row.get(0),
-                        ).unwrap_or(0.0);
+        println!(
+            "* {}| {} | {:.1} units |",
+            formatted_time, action_type, dosage_units);
+    }
 
-                        println!("❌ ERROR: Cannot adjust basal insulin dose.");
-                        println!("Last basal adjustment was at {} (dose: {:.2} units).", 
-                                 last_basal_time, last_basal_dose);
-                        println!("Basal adjustments are effective for 24 hours to prevent overlap.");
-                        println!("Please wait {:.1} more hours before the next adjustment.", hours_remaining);
-                        return;
+    if !found {
+        println!("No insulin logs found for this patient.");
+    }
+
+    Ok(())
+}
+
+// displays patient glucose readings and if display_just_latest_one is true then just display just one latest reading
+pub fn display_patient_glucose_readings(conn: &Connection, patient_id: &str, display_just_latest_one: bool) {
+    match get_patient_glucose_history(conn, patient_id,display_just_latest_one) {
+        Ok(readings) => {
+            if readings.is_empty() {
+                println!("No glucose readings found for this patient.");
+            } else {
+                println!("\n--- Glucose Reading History ---");
+
+
+                for (time_str, glucose, status) in readings {
+                    if let Ok(parsed_time) = NaiveDateTime::parse_from_str(&time_str, "%Y-%m-%d %H:%M:%S") {
+                        let local_time = Local.from_utc_datetime(&parsed_time);
+                        let formatted_time = local_time.format("%b %d, %Y %I:%M %p");
+                        println!(
+                            "* {} | Glucose: {:.1} mg/dL | Status: {}",
+                            formatted_time, glucose, status
+                        );
                     } else {
-                        println!("✓ Last basal adjustment was more than 24 hours ago (at {}).", last_basal_time);
+                        println!(
+                            "* {} | Glucose: {:.1} mg/dL | Status: {} (unparsed time)",
+                            time_str, glucose, status
+                        );
                     }
-                }
-                Ok(None) => {
-                    println!("✓ No previous basal insulin adjustments found.");
-                }
-                Err(e) => {
-                    eprintln!("Warning: Could not check previous basal adjustments: {}", e);
-                    // Continue with caution
                 }
             }
         }
-
-    // dosage in units - with max validation
-    let Some(dosage_units) = prompt_parse_f32("Dosage units (e.g., 1.5): ") else { return; };
-
-    // Validate dosage doesn't exceed max
-    if dosage_units > patient.max_dosage {
-        eprintln!("❌ ERROR: Dosage {:.2} exceeds maximum allowed dose of {:.2} units.", 
-                  dosage_units, patient.max_dosage);
-        eprintln!("Request rejected.");
-        return;
-    }
-
-    if dosage_units <= 0.0 {
-        eprintln!("❌ ERROR: Dosage must be positive.");
-        return;
-    }
-
-    // who requested (caretaker)
-    let requested_by = prompt_string("Requested by (your name/id): ");
-    if requested_by.trim().is_empty() {
-        eprintln!("Requested by is required.");
-        return;
-    }
-
-    // Final confirmation
-    println!("\n--- Request Summary ---");
-    println!("Patient: {} {} (ID {})", patient.first_name, patient.last_name, patient.patient_id);
-    println!("Type: {}", action_type);
-    println!("Dosage: {:.2} units (max: {:.2})", dosage_units, patient.max_dosage);
-    if let Some(glucose) = latest_glucose {
-        if glucose > 0.0 {
-            println!("Latest glucose: {:.1} mg/dL", glucose);
-        }
-    }
-    print!("Confirm request? [y/N]: ");
-    io::stdout().flush().unwrap();
-    let mut confirm = String::new();
-    io::stdin().read_line(&mut confirm).unwrap();
-    if !confirm.trim().eq_ignore_ascii_case("y") {
-        println!("Request cancelled.");
-        return;
-    }
-
-    match insert_insulin_log(conn, patient_id, &action_type, dosage_units, &requested_by) {
-        Ok(_) => println!("✓ Insulin request logged successfully."),
-        Err(e) => eprintln!("Failed to log insulin request: {}", e),
+        Err(e) => eprintln!("Error retrieving glucose readings: {}", e),
     }
 }
 
-/* ---------- Helper Functions ---------- */
-
-fn insert_insulin_log(
-    conn: &rusqlite::Connection,
-    patient_id: i32,
-    action_type: &str,
-    dosage_units: f32,
-    requested_by: &str,
-) -> rusqlite::Result<usize> {
-    conn.execute(
-        "INSERT INTO insulin_logs (patient_id, action_type, dosage_units, requested_by, dosage_time)
-         VALUES (?1, ?2, ?3, ?4, datetime('now'))",
-        rusqlite::params![patient_id, action_type, dosage_units, requested_by],
-    )
-}
-
-// You'll need to add view_patient_summary_flow if it's not already there
-// For now, adding a stub:
-fn view_patient_summary_flow(_conn: &rusqlite::Connection) {
-    println!("View Patient Summary");
-}
-
-/* ---------- Prompt helpers ---------- */
-
-fn prompt_string(label: &str) -> String {
-    print!("{}", label);
-    io::stdout().flush().unwrap();
-    let mut s = String::new();
-    io::stdin().read_line(&mut s).unwrap();
-    s.trim().to_string()
-}
-
-fn prompt_parse_i32(label: &str) -> Option<i32> {
-    let s = prompt_string(label);
-    match s.parse::<i32>() {
-        Ok(v) => Some(v),
-        Err(_) => { eprintln!("Invalid integer."); None }
+pub fn display_patient_complete_glucose_insulin_history(conn: &Connection, patient_id: &str){
+    println!("running display patient data:--------");
+    // retrieve patient info from patient table in database
+    match get_patient_data_from_patient_table(&conn, patient_id) {
+        Ok(Some(patient)) => {
+            // display all glucose data for patient
+            display_patient_glucose_readings(&conn, patient_id, false);
+            get_patient_insulin_data(&conn, patient_id, false);
+        },
+        Ok(None) => println!("No patient found."),
+        Err(e) => eprintln!("Error: {}", e),
     }
-}
 
-fn prompt_parse_f32(label: &str) -> Option<f32> {
-    let s = prompt_string(label);
-    match s.parse::<f32>() {
-        Ok(v) => Some(v),
-        Err(_) => { eprintln!("Invalid number."); None }
-    }
+
 }

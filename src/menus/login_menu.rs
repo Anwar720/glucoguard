@@ -37,7 +37,7 @@ pub fn show_login_menu(conn: &rusqlite::Connection) -> LoginResult {
             match session_manager.create_session(conn, login_result.user_id.clone(), login_result.role.clone()) {
                 Ok(session_id) => {
                     login_result.session_id = session_id; // set session_id
-                    println!("Login successful. Session created: {}", login_result.session_id);
+                    //println!("Login successful. Session created: {}", login_result.session_id);
                     return login_result;
                 }
                 Err(e) => {

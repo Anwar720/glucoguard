@@ -7,6 +7,10 @@ use crate::auth::{generate_one_time_code};
 use uuid::Uuid;
 use crate::session::SessionManager;
 use rusqlite::Connection;
+use crate::insulin::{display_patient_glucose_readings,
+    get_patient_data_from_patient_table};
+
+
 
 pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str) {
     let session_manager = SessionManager::new();
@@ -55,9 +59,11 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
             1 => {
                 //View the patient’s most recent glucose readings.
                 //view_patient_summary_flow(conn)
+                display_patient_glucose_readings(&conn, &session.user_id, true);
             },
             2 => {
                 // View the patient’s current basal rate and bolus insulin options.
+                show_patinet_current_basal_bolus_limits(conn,&session.user_id);
             }, 
             3 => {
                 //  Request a bolus insulin dose.
@@ -76,7 +82,7 @@ pub fn show_patient_menu(conn: &rusqlite::Connection,role:&Role,session_id: &str
             }, 
             6 => {
                 //
-                create_and_display_caretaker_activation_code(conn,role);
+                create_and_display_caretaker_activation_code(conn,&role);
             }, 
             7 => {
                 println!("Logging out...");
@@ -126,3 +132,21 @@ pub fn create_and_display_caretaker_activation_code(
     }
 }
 
+
+fn show_patinet_current_basal_bolus_limits(conn:&rusqlite::Connection, patient_id:&String){
+    match get_patient_data_from_patient_table(conn, patient_id) {
+        Ok(Some(patient)) => {
+            println!("\n--------Patient dosage info --------");
+            println!("Name: {} {}", patient.first_name, patient.last_name);
+            println!("Max Dosage: {:.2} units", patient.max_dosage);
+            println!("Glucose Thresholds: low {:.1}, high {:.1} \n",
+                    patient.low_glucose_threshold, patient.high_glucose_threshold);
+        }
+        Ok(None) => {
+            println!("No patient found with ID: {}", patient_id);
+        }
+        Err(e) => {
+            eprintln!("Error fetching patient data: {}", e);
+        }
+    }
+}
