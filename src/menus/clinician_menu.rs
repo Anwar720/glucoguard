@@ -48,11 +48,11 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
 
         println!("=== Clinician Menu ===");
         println!("1. View patient insulin history.");
-        println!("2. Edit patient insulin limits.");// 
-        println!("3. Edit patient glucose limits.");
-        println!("4. View patient info");
-        println!("5. Create Patient Account");
-        println!("6. Logout");
+        println!("2. Edit patient insulin parameters.");// 
+        // println!("3. Edit patient glucose parameters.");
+        println!("3. View patient info");
+        println!("4. Create Patient Account");
+        println!("5. Logout");
         println!("Enter your choice: ");
 
         let choice = utils::get_user_choice();
@@ -91,30 +91,30 @@ pub fn show_clinician_menu(conn: &rusqlite::Connection,role: &Role,session_id: &
                             }
                         }
                 },
-                3=>{
-                    // requres that we have a valid patient_id for clinician 
-                    if current_patient_id.is_empty(){
-                        println!("Cannot perform this action because no patient is assigned.");
-                        continue;
-                    }
+                // 3=>{
+                //     // requres that we have a valid patient_id for clinician 
+                //     if current_patient_id.is_empty(){
+                //         println!("Cannot perform this action because no patient is assigned.");
+                //         continue;
+                //     }
 
-                    //Set dosage limits, safety thresholds, and alert conditions.
-                    // prompts user for max,min glucose and update into patients table
-                    match update_patient_max_min_glucose(&conn, &current_patient_id) {
-                        Ok(rows_updated) if rows_updated > 0 => println!("Patient glucose limits updated successfully."),
-                        Ok(_) => println!("No patient found with that ID."),
-                        Err(e) => eprintln!("Error updating patient limits"),
-                    }
-                },
-                4=>{
+                //     //Set dosage limits, safety thresholds, and alert conditions.
+                //     // prompts user for max,min glucose and update into patients table
+                //     match update_patient_max_min_glucose(&conn, &current_patient_id) {
+                //         Ok(rows_updated) if rows_updated > 0 => println!("Patient glucose limits updated successfully."),
+                //         Ok(_) => println!("No patient found with that ID."),
+                //         Err(e) => eprintln!("Error updating patient limits"),
+                //     }
+                // },
+                3=>{
                     // view patient info 
                     show_patient_data(conn, &current_patient_id)
                 },
-                5=>{
+                4=>{
                     // get patient data and create patient account 
                     handle_patient_account_creation(&conn,role, &session_id);
                 },
-                6 => {
+                5 => {
                     println!("Logging out...");
                     if let Err(e) = session_manager.remove_session(conn, session_id) {
                         println!("Failed to remove session: {}", e);
@@ -206,8 +206,8 @@ pub fn update_patient_bolus_basal(conn: &Connection,patient_id: &str,bolus: f32,
 
 pub fn update_patient_max_min_glucose(conn: &Connection,patient_id: &str) -> Result<usize> {
 
-    let low_glucose_threshold = read_valid_float("Low Glucose Threshold (0–100): ", 0.0, 100.0);
-    let high_glucose_threshold = read_valid_float("High Glucose Threshold (100–1000): ", 100.0, 1000.0);
+    let low_glucose_threshold = read_valid_float("Low Glucose Threshold (0–70): ", 0.0, 69.0);
+    let high_glucose_threshold = read_valid_float("High Glucose Threshold (): ", 100.0, 180.0);
 
     conn.execute(
         "UPDATE patients
